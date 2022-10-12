@@ -32,14 +32,19 @@ Vite2 + TypeScript + Vue3 + element-plus
 
 #### 源码运行教程
 
+<br>
+
 **配置后端跨域** 
+
+<br>
+
 后端配置跨域有两种方法，可以选择其中一种，注意不要两种方法同时配置
 
 - 方法一（推荐开发时使用）：
 后端java项目配置跨域参数。
 在Spring Boot轻论坛项目里找到crossOrigin.properties文件，将前端的访问地址写入allowedOrigins属性里面。修改完需要重启项目才能生效
 
-
+<br>
 
 - 方法二（推荐服务器部署时使用）：
 使用Nginx配置跨域。
@@ -47,6 +52,8 @@ Vite2 + TypeScript + Vue3 + element-plus
 <br>
 
 **切换后端模板** 
+
+<br>
 登录安装好的轻论坛后端管理后台 --> 模板列表 --> 点击列表“使用中”列的按钮，将当前使用的模板切换到“前后端分离模板”
 
 <br>
