@@ -24,7 +24,7 @@
                             评论的话题
                         </template>
                         <template #default="scope">
-                            <router-link tag="div" class="link" :to="{path: '/thread', query:{ topicId : scope.row.id}}">
+                            <router-link tag="div" class="link" :to="{path: '/thread', query:{ topicId : scope.row.topicId}}">
                                 {{scope.row.topicTitle}}
                             </router-link>
                         </template>

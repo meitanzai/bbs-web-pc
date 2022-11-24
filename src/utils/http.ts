@@ -220,7 +220,9 @@ axiosInstance.interceptors.response.use((response: AxiosResponse) => {
                                         //会话token
                                         let sessionToken = tokenObject.accessToken+","+tokenObject.refreshToken;
         
-
+																				//手动添加标头 解决响应拦截器重试请求报is not a valid HTTP header field value错误https://github.com/axios/axios/issues/5143
+                                        const originalConfig = error.config; 
+                                        originalConfig!.headers = { ...originalConfig!.headers };
 
                                         // 让每个请求携带会话token  ['Authorization']
                                         config.headers['Authorization'] = 'Bearer '+sessionToken;
@@ -369,7 +371,7 @@ axiosInstance.interceptors.response.use((response: AxiosResponse) => {
         if(error.config.showLoading !== false){
             hideLoading();
         }
-        return Promise.reject(error);
+        return Promise.reject(error.response);
 });
 
 

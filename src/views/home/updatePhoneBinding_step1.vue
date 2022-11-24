@@ -214,7 +214,7 @@
                             processErrorInfo(data.error as Map<string,string> , error,()=>{});
                             
                             if(data.captchaKey != null){
-                                form.captchaKey = result.captchaKey;
+                                form.captchaKey = data.captchaKey;
                                 replaceCaptcha();
                             }
 

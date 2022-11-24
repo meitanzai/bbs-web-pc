@@ -353,7 +353,7 @@
 </template>
 
 <script setup lang="ts">
-    import { getCurrentInstance, ComponentInternalInstance, reactive, onMounted, ref, computed} from 'vue'
+    import { getCurrentInstance, ComponentInternalInstance, reactive, onMounted, ref, computed, onUnmounted} from 'vue'
     import { useMeta} from 'vue-meta'
     import { appStore } from "@/store";
     import { onBeforeRouteUpdate, useRouter } from 'vue-router'
@@ -1044,6 +1044,13 @@
 		queryRegister();
         
 	}
+	//卸载组件实例后调用
+    onUnmounted (()=>{
+        if(form.timer != null){
+            clearInterval(form.timer); //销毁
+            form.timer = null
+        }
+    })
 </script>
 <style scoped lang="scss">
 .registerModule{

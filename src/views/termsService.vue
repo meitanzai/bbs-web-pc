@@ -10,7 +10,7 @@
                     <div class="title">{{state.title}}</div>
 
                     <div class="content" ref="content">
-                        <component v-bind:is ="analyzeDataComponent(state.content)" v-bind="$props" />        
+                        <RenderTemplate :html="state.content"></RenderTemplate>     
                     </div>
                     <el-skeleton :loading="state.loading"></el-skeleton>
                 </div>
@@ -71,18 +71,6 @@
     const error = reactive({
     })
 
-    //动态解析模板数据
-    const analyzeDataComponent = computed(()=>{ 
-        return function (this: any,html:any) {
-            return {
-                template: "<div>"+ html +"</div>", // use content as template for this component 必须用<div>标签包裹，否则会有部分内容不显示
-                components: {//局部注册组件。注意：局部注册的组件在后代组件中并不可用
-                    'el-image': ElImage,
-                },
-            };
-        };	
-    })
-
     //查询服务条款
     const queryTermsService = () => {
         proxy?.$axios({
@@ -136,10 +124,10 @@
                     let style = '';
                     if(childNode.getAttribute("width") != null){//如果是表情，表情图不放大
                         style = 'style="width: '+childNode.getAttribute("width")+'; height: '+childNode.getAttribute("height")+'"';
-                        html = '<el-image src="'+store.state.apiUrl+src+'" '+style+' loading="lazy" ></el-image>';
+                        html = '<el-image src="'+src+'" '+style+' loading="lazy" ></el-image>';
                     }else{
                     
-                        html = '<el-image src="'+src+'" '+style+' :preview-src-list=["'+src+'"] lazy hide-on-click-modal ></el-image>';
+                        html = '<el-image src="'+store.state.apiUrl+src+'" '+style+' :preview-src-list=["'+store.state.apiUrl+src+'"] lazy hide-on-click-modal ></el-image>';
                     }
                     //创建要替换的元素
                 //	let html = '<el-image src="'+src+'" '+style+' lazy></el-image>';

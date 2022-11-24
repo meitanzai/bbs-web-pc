@@ -21,7 +21,7 @@ import 'element-plus/theme-chalk/el-affix.css'//全局 固钉
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
 import { ElImage} from 'element-plus'
-
+import Icon from "@/components/icon/Icon.vue";
 
 import { createMetaManager} from 'vue-meta'
 import '@/assets/css/base.css'
@@ -57,7 +57,8 @@ app.use(createMetaManager(false, {
     meta: { tag: 'meta', nameless: true }
 }))
 
-//app.component('el-image', ElImage);
+app.component('Icon', Icon)//富文本渲染展示需要全局注册
+app.component('el-image', ElImage);//富文本渲染展示需要全局注册
 
 //ElementPlus图标
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {

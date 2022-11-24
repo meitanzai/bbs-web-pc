@@ -60,7 +60,7 @@
                         </template>
                     </el-table-column>
                     <el-table-column prop="times" label="时间"  width="200" align="center"/>
-                    <el-table-column prop="postTime" label="备注" align="center"/>
+                    <el-table-column prop="remark" label="备注" align="center"/>
 
                     <template #empty>
                         <div v-if="!state.loading">暂无数据</div>

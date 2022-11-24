@@ -34,7 +34,7 @@
                             </div>
                             
                             <div class="content" :ref="'help_'+state.help.id">
-                                <component v-bind:is ="analyzeDataComponent(state.help.content)" v-bind="$props" />       
+                                <RenderTemplate :html="state.help.content"></RenderTemplate>       
                             </div>
                         </div>
                         <el-result v-if="state.loading == false && state.help == null || Object.keys(state.help).length == 0" icon="info" title="没有找到相关记录"></el-result>
@@ -120,48 +120,7 @@
         loading:true,//是否显示骨架屏
     });
 
-     //动态解析模板数据
-     const analyzeDataComponent = computed(()=>{ 
-        return function (this: any,html:any) {
-            return {
-                template: "<div>"+ html +"</div>", // use content as template for this component 必须用<div>标签包裹，否则会有部分内容不显示
-                components: {//局部注册组件。注意：局部注册的组件在后代组件中并不可用
-                    'el-image': ElImage,
-                    'Icon': Icon,
-                },
-                data : function() {
-                    return {
-                        error :{},
-                    };
-                },
-                mounted :function (this: any) {
-                    this.resumePlayerNodeData();
-                },
-                
-                methods: {
-                    //恢复播放器节点数据(vue组件切换时会自动刷新数据，视频播放器框在组件生成数据内容之后插入，组件刷新数据时播放器框会消失，组件刷新后需要用之前的节点数据恢复)
-                    resumePlayerNodeData : function(){
-                        nextTick(()=>{
-                            if(state.playerObjectList.length >0){
-                                for(let i=0; i< state.playerNodeList.length; i++){
-                                    let playerNode = state.playerNodeList[i] as any;
-                                    let playerId = playerNode.getAttribute("id");
-                                    let node:any = document.getElementById(playerId);
-                                    if(node != null){
-                                        node.parentNode.replaceChild(playerNode,node);
-                                    }
-                                    
-                                }
-                            }
-        
-                        })
-                    }
-                }
-                
-            };
-		};	
-    })
-
+    
 
     //查询帮助导航
     const queryHelpNavigation = (helpTypeId:string) => {
@@ -250,7 +209,11 @@
                         renderVideoPlayer();//渲染视频播放器
                     }, 30);
                     
-                    
+                    //渲染代码
+                    let helpRefValue = proxy?.$refs['help_'+helpId];
+                    if(helpRefValue != undefined){
+                        renderBindNode(helpRefValue); 
+                    }
                 }); 
             }
         })
@@ -517,19 +480,7 @@
     });
 
     
-    
-    //生命周期钩子 -- 响应数据修改时运行
-    onUpdated(() => {
-        nextTick(()=> {
-            let helpId:string = router.currentRoute.value.query.helpId != undefined ?router.currentRoute.value.query.helpId as string :'';
-            if(helpId != ''){
-                let helpRefValue = proxy?.$refs['help_'+helpId];
-                if(helpRefValue != undefined){
-                    renderBindNode(helpRefValue); 
-                }
-            }
-        })
-    })
+ 
 
     onMounted(() => {
         let helpTypeId:string = router.currentRoute.value.query.helpTypeId != undefined ?router.currentRoute.value.query.helpTypeId as string :'';

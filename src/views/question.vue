@@ -83,7 +83,7 @@
                                 <div class="cancelAccount" v-if="state.question.account == null || state.question.account == ''">此用户账号已注销</div>
                                 
                                 <div :ref="'question_'+state.question.id">
-                                    <component v-bind:is ="analyzeDataComponent(state.question.content)" v-bind="$props" /> 
+                                    <RenderTemplate :html="state.question.content"></RenderTemplate> 
                                 </div>        
                             </div>
                             <template v-for="(appendQuestionItem,index) in state.question.appendQuestionItemList">
@@ -93,7 +93,7 @@
                                         <span class="appendTime">{{appendQuestionItem.postTime}}</span>
                                     </div>
                                     <div class="appendContent" :ref="'appendQuestion_'+appendQuestionItem.id">
-                                        <component v-bind:is ="analyzeDataComponent(appendQuestionItem.content)" v-bind="$props" />
+                                        <RenderTemplate :html="appendQuestionItem.content"></RenderTemplate>
                                     </div> 
                                 </div>		
                             </template>
@@ -225,7 +225,7 @@
                                     <div class="cancelAccount" v-if="answer.account == null || answer.account == ''">此用户账号已注销</div>
                                     
                                     <div :ref="'answerContent_'+answer.id">
-                                        <component v-bind:is ="analyzeDataComponent(answer.content)" v-bind="$props" />
+                                        <RenderTemplate :html="answer.content"></RenderTemplate>
                                     </div>
                                 </div>
                                 <div class="clearfix"></div>
@@ -637,17 +637,6 @@
 	}
 
 
-    //动态解析模板数据
-	const analyzeDataComponent = computed(()=>{ 
-        return function (this: any,html:any) {
-            return {
-                template: "<div>"+ html +"</div>", // use content as template for this component 必须用<div>标签包裹，否则会有部分内容不显示
-                components: {//局部注册组件。注意：局部注册的组件在后代组件中并不可用
-                    'el-image': ElImage,
-                },
-            };
-        };	
-    })
 
 
     //查询问题
@@ -697,9 +686,33 @@
                     state.question.avatar = letterAvatar(state.question.account, 70);
                 }
 
+
+                nextTick(()=>{
+                    //渲染代码
+                    let questionRefValue = proxy?.$refs['question_'+state.questionId];
+                    if(questionRefValue != undefined){
+                        renderBindNode(questionRefValue); 
+                    }
+
+                    if(data.appendQuestionItemList != null && data.appendQuestionItemList.length >0){
+                        for(let i=0; i<data.appendQuestionItemList.length; i++){
+                            let appendQuestionItem = data.appendQuestionItemList[i];
+                            
+                            let appendQuestionRefValue = (proxy?.$refs['appendQuestion_'+appendQuestionItem.id] as any);
+                            if(appendQuestionRefValue != undefined){
+                                renderBindNode(appendQuestionRefValue[0]); 
+                            }
+                        }
+                        
+                    }
+                    
+                });
                 
                 //回调
                 callback();
+
+                
+
             }
             state.question_loading = false;//是否显示问题骨架屏
         })
@@ -952,8 +965,16 @@
                 }
                 state.isPageCall = false;
 
-
-
+                if(data.records != null && data.records.length > 0){
+                    for (let i = 0; i <data.records.length; i++) {
+                        let answer = data.records[i];
+                        let answerRefValue =  (proxy?.$refs['answerContent_'+answer.id] as any);
+                        if(answerRefValue != undefined){
+                            renderBindNode(answerRefValue[0]); 
+                        }
+                        
+                    }
+                }
             });
         })
         .catch((error: any) =>{
@@ -2590,41 +2611,6 @@
         
         next();
     });
-
-    //生命周期钩子 -- 响应数据修改时运行
-    onUpdated(() => {
-        nextTick(()=> {
-            let questionId:string = router.currentRoute.value.query.questionId != undefined ?router.currentRoute.value.query.questionId as string :'';
-            if(questionId != ''){
-                let questionRefValue = proxy?.$refs['question_'+questionId];
-                if(questionRefValue != undefined){
-                    renderBindNode(questionRefValue); 
-                }
-
-                if(state.question.appendQuestionItemList != null && state.question.appendQuestionItemList.length >0){
-                    for (let i = 0; i <state.question.appendQuestionItemList.length; i++) {
-                        let appendQuestionItem = state.question.appendQuestionItemList[i];
-                        let appendQuestionItemRefValue =  (proxy?.$refs['appendQuestion_'+appendQuestionItem.id] as any)[0];
-                        if(appendQuestionItemRefValue != undefined){
-                            renderBindNode(appendQuestionItemRefValue); 
-                        }
-                    }
-                }
-            }
-
-            
-            if(state.answerList != null && state.answerList.length > 0){
-				for (let i = 0; i <state.answerList.length; i++) {
-					let answer = state.answerList[i];
-					let answerRefValue =  (proxy?.$refs['answerContent_'+answer.id] as any)[0];
-					if(answerRefValue != undefined){
-						renderBindNode(answerRefValue); 
-					}
-					
-				}
-			}
-        })
-    })
 
     
     onMounted(() => {

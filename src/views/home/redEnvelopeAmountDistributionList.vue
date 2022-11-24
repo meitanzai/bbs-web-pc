@@ -130,7 +130,7 @@
             url: '/user/control/redEnvelopeAmountDistributionList',
             method: 'get',
             params:  { 
-                giveRedEnvelopeId,
+                giveRedEnvelopeId:giveRedEnvelopeId,
                 page: page
             },
             //showLoading: false,//是否显示加载图标
@@ -226,6 +226,7 @@
         padding: 10px 0 10px 0px;
         background: #fff;
         line-height:46px;
+        margin-bottom: 10px;
         .giveRedEnvelopeInfo{
             margin-left: 30px;
             margin-right: 30px;

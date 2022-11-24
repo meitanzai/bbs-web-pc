@@ -24,7 +24,7 @@
                             回答的问题
                         </template>
                         <template #default="scope">
-                            <router-link tag="div" class="link" :to="{path: '/question', query:{ questionId : scope.row.id}}">
+                            <router-link tag="div" class="link" :to="{path: '/question', query:{ questionId : scope.row.questionId}}">
                                 {{scope.row.questionTitle}}
                             </router-link>
                         </template>

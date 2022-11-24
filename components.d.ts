@@ -47,6 +47,7 @@ declare module '@vue/runtime-core' {
     Header: typeof import('./src/components/Header.vue')['default']
     Icon: typeof import('./src/components/icon/Icon.vue')['default']
     Login: typeof import('./src/components/Login.vue')['default']
+    RenderTemplate: typeof import('./src/components/RenderTemplate.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     ServiceNav: typeof import('./src/components/ServiceNav.vue')['default']

@@ -150,7 +150,7 @@
             url: '/user/control/updateAvatar',
             method: 'post',
             data: formData,
-            onUploadProgress: progressEvent => {
+            onUploadProgress: (progressEvent:any) => {
                 if (progressEvent.lengthComputable) {
                     
                     let rate = progressEvent.loaded / progressEvent.total;  //已上传的比例

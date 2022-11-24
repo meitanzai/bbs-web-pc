@@ -172,7 +172,7 @@ export interface Topic {
     userInfoStatus: number;//用户信息状态
     userRoleNameList: Array<string>;//用户角色名称集合
     allowRoleViewList: Array<string>;//话题允许查看的角色名称集合(默认角色除外)
-    hideTagTypeMap: Map<number,string>;//key:内容含有隐藏标签类型  10.输入密码可见  20.评论话题可见  30.达到等级可见 40.积分购买可见 50.余额购买可见  value:当前用户是否已对隐藏内容解锁
+    hideTagTypeMap: Map<number,boolean>;//key:内容含有隐藏标签类型  10.输入密码可见  20.评论话题可见  30.达到等级可见 40.积分购买可见 50.余额购买可见  value:当前用户是否已对隐藏内容解锁
     giveRedEnvelopeId: string;//发红包Id
     isStaff: boolean;//是否为员工 true:员工  false:会员
     sort: number;//排序
@@ -194,7 +194,7 @@ export interface MediaInfo {
 }
 
 
-//媒体文件信息
+//话题取消隐藏
 export interface TopicUnhide {
     id: string;//媒体文件URL
     userName: string;//取消隐藏的用户名称
@@ -205,7 +205,7 @@ export interface TopicUnhide {
     point: string;//消费积分
     amount: string;//消费金额
     cancelTime: string;//取消隐藏时间
-    hideTagType: string;//隐藏标签类型 10:输入密码可见  40:积分购买可见  50:余额购买可见
+    hideTagType: number;//隐藏标签类型 10:输入密码可见  40:积分购买可见  50:余额购买可见
 
     avatar: string;//base64格式头像
 }
@@ -750,7 +750,7 @@ export interface PointLog {
     operationUserName: string;//操作用户名称
     operationAccount: string;//操作用户账号
     userName: string;//用户名称
-    amountState: number;//积分状态  1:账户存入  2:账户支出
+    pointState: number;//积分状态  1:账户存入  2:账户支出
     point: string;//积分
     times: string;//时间
     remark: string;//备注

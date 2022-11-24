@@ -1,7 +1,7 @@
 {
   "name": "bbs-web-pc",
   "private": true,
-  "version": "2022.10.10",
+  "version": "2022.11.24",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
@@ -12,7 +12,7 @@
     "@types/jquery": "^3.5.14",
     "@types/prismjs": "^1.26.0",
     "@vitejs/plugin-legacy": "^1.8.2",
-    "axios": "^1.0.0-alpha.1",
+    "axios": "^1.2.0",
     "cropperjs": "^1.5.12",
     "crypto-js": "^4.1.1",
     "dplayer": "^1.27.0",

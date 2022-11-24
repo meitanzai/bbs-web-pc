@@ -43,7 +43,8 @@
                                 <div class="cancelAccount" v-if="state.topic.account == null || state.topic.account == ''">此用户账号已注销</div>
                                 
                                 <div :ref="'topic_'+state.topic.id">
-                                    <component v-bind:is ="topicComponent(state.topic.content)" v-bind="$props" /> 
+                                    <RenderTemplate @click-onTopicUnhide="onTopicUnhide" :html="state.topic.content"></RenderTemplate>
+                                    
                                 </div>
                             </div>
                             <div class="favorite-formModule">
@@ -95,7 +96,8 @@
                                 <div class="commentTime">{{comment.postTime}}</div>
                                 
                                 <div class="quote" v-if="comment.quoteList != null && comment.quoteList.length >0">
-                                    <component v-bind:is ="quoteDataComponent(state.quoteData.get(comment.id))" v-bind="$props" />
+                                    <RenderTemplate :html="state.quoteData.get(comment.id)"></RenderTemplate>
+                                    
                                 </div>
                                 
                                 <div class="commentContent">
@@ -103,7 +105,7 @@
                                    
 
                                     <div :ref="'commentContent_'+comment.id">
-                                        <component v-bind:is ="commentDataComponent(comment.content)" v-bind="$props" />
+                                        <RenderTemplate :html="comment.content"></RenderTemplate>
                                     </div>
                                 </div>
                                 <div class="clearfix"></div>
@@ -671,19 +673,10 @@
      //错误
      const error = reactive({
         content : new Map<string,string>(),//评论和引用内容错误
-       // quoteContent : new Map<string,string>(),
         replyContent: new Map<string,string>(),//回复内容错误
         captchaValue : new Map<string,string>(),
         comment: new Map<string,string>(),//评论和引用错误
-      //  quote: new Map<string,string>(),
         reply: new Map<string,string>(),//回复错误
-        
-      //  editComment: new Map<string,string>(),
-      //  editReply: new Map<string,string>(),
-     //   editCommentContent : new Map<string,string>(),
-     //   editReplyContent: ''
-
-
     })
 
     //评论ref节点处理
@@ -705,140 +698,70 @@
         }
 	}
 
-    //动态解析评论引用模板数据
-    const quoteDataComponent = computed(()=>{ 
-        return function (this: any,html:any) {
-				return {
-					template: html , // use content as template for this component 不能有换行符，否则换行符后面的数据不显示
-					
-				};
-		};	
-    })
-   
-    
-    //动态解析评论模板数据
-    const commentDataComponent = computed(()=>{ 
-        return function (this: any,html:any) {
-            return {
-                template: "<div>"+ html +"</div>", // use content as template for this component 必须用<div>标签包裹，否则会有部分内容不显示
-                components: {//局部注册组件。注意：局部注册的组件在后代组件中并不可用
-                    'el-image': ElImage,
-                },
-            };
-        };	
-    })
 
+    //话题解锁
+    const onTopicUnhide = (hideType: number,hidePassword: string) => {
+        let formData = new FormData();
+        formData.append('topicId', state.topicId);
+        formData.append('hideType',  String(hideType));
+        if(hideType == 10){
+            if(hidePassword != undefined && hidePassword != ""){
+                formData.append('password',  hidePassword);
+            }else{
+                ElMessage({
+                    showClose: true,
+                    message: '密码不能为空',
+                    type: 'error',
+                })
+                return;
+            }
+        }
 
-    //动态解析话题模板数据
-    const topicComponent = computed(()=>{ 
-        return function (this: any,html:any) {
-            return {
-                template: "<div>"+ html +"</div>", // use content as template for this component 必须用<div>标签包裹，否则会有部分内容不显示
-                components: {//局部注册组件。注意：局部注册的组件在后代组件中并不可用
-                    'el-image': ElImage,
-                    'Icon': Icon,
-                },
-                data : function() {
-                    return {
-                        hide_passwordList :[],//话题隐藏密码
-                        error :{},
-                    };
-                },
-                mounted :function (this: any) {
-                    this.resumePlayerNodeData();
-                },
+        ElMessageBox.confirm('确定解锁?',{
+            // type: 'warning',
+            cancelButtonText: "取消",
+            confirmButtonText: '确定',
+            lockScroll: false,
+        })
+        .then(() => {
+            proxy?.$axios({
+                url: '/user/control/topic/unhide',
+                method: 'post',
+                data: formData
+            })
+            .then((response: AxiosResponse) => {
+                if(response){
+
+                    const result: any = response.data;
                 
-                methods: {
-                     //模板中将点击事件绑定到本函数，作用域只限在这个子组件中
-                    topicUnhide : function(this:any,hideType: number,hidePasswordIndex: number){
-                        let _self = this;
-                        
-                        let topicId:string = router.currentRoute.value.query.topicId != undefined ?router.currentRoute.value.query.topicId as string :'';
-                        
-                        let formData = new FormData();
-                        formData.append('topicId', topicId);
-                        formData.append('hideType',  String(hideType));
-                        if(hideType == 10){
-                            let hide_password = _self.hide_passwordList[hidePasswordIndex];
-                            if(hide_password != undefined && hide_password != ""){
-                                formData.append('password',  hide_password);
-                            }else{
-                                ElMessage({
-                                    showClose: true,
-                                    message: '密码不能为空',
-                                    type: 'error',
-                                })
-
-                                return;
+                    if(JSON.parse(result.success)){
+                        ElMessage({
+                            showClose: true,
+                            message: '话题解锁成功',
+                            type: 'success',
+                            onClose:()=>{
+                                
                             }
-                        }
-                        
-                        ElMessageBox.confirm('确定解锁?',{
-                               // type: 'warning',
-                                cancelButtonText: "取消",
-                                confirmButtonText: '确定'
-                            })
-                            .then(() => {
-                                proxy?.$axios({
-                                    url: '/user/control/topic/unhide',
-                                    method: 'post',
-                                    data: formData
-                                })
-                                .then((response: AxiosResponse) => {
-                                    if(response){
-
-                                        const result: any = response.data;
-                                    
-                                        if(JSON.parse(result.success)){
-                                            ElMessage({
-                                                showClose: true,
-                                                message: '话题解锁成功',
-                                                type: 'success',
-                                                onClose:()=>{
-                                                    
-                                                }
-                                            })
-                                            //查询话题
-                                            queryTopic(topicId,()=>{});//调用父组件方法
-                                        }else{
-                                            //处理错误信息
-                                            processErrorInfo(result.error as Map<string,string> ,  _self.error,()=>{});
-                                            
-                                        }
-                                    }
-                                })
-                                .catch((error: any) =>{
-                                    console.log(error);
-                                });
-                            })
-                            .catch(() => {
-                                //取消
-                            })
-
-
-                    },
-                    //恢复播放器节点数据(vue组件切换时会自动刷新数据，视频播放器框在组件生成数据内容之后插入，组件刷新数据时播放器框会消失，组件刷新后需要用之前的节点数据恢复)
-                    resumePlayerNodeData : function(){
-                        nextTick(()=>{
-                            if(state.playerObjectList.length >0){
-                                for(let i=0; i< state.playerNodeList.length; i++){
-                                    let playerNode = state.playerNodeList[i] as any;
-                                    let playerId = playerNode.getAttribute("id");
-                                    let node:any = document.getElementById(playerId);
-                                    if(node != null){
-                                        node.parentNode.replaceChild(playerNode,node);
-                                    }
-                                    
-                                }
-                            }
-        
                         })
+                        //查询话题
+                        queryTopic(state.topicId,()=>{});//调用父组件方法
+                    }else{
+                        //处理错误信息
+                        processErrorInfo(result.error as Map<string,string> ,  error,()=>{});
+                        
                     }
                 }
-                
-            };
-		};	
-    })
+            })
+            .catch((error: any) =>{
+                console.log(error);
+            });
+        })
+        .catch(() => {
+            //取消
+        })
+
+        
+    }
 
    
     //查询话题
@@ -880,6 +803,12 @@
                     setTimeout(function() {
                         renderVideoPlayer();//渲染视频播放器
                     }, 30);
+
+                    //渲染代码
+                    let topicRefValue = proxy?.$refs['topic_'+state.topicId];
+                    if(topicRefValue != undefined){
+                        renderBindNode(topicRefValue); 
+                    }
                 });
 
                 
@@ -894,8 +823,6 @@
         });
 	}
 
-    // 主动暴露方法,其他组件才可以调用 defineExpose暴露的函数
-    defineExpose({ queryTopic })
 
 
      //查询评论列表
@@ -1036,6 +963,8 @@
                     bindNode(contentNode);
                     comment.content = escapeVueHtml(contentNode.innerHTML);
 
+
+
                 }
             }
 
@@ -1087,7 +1016,16 @@
                 state.isPageCall = false;
 
 
-
+                if(data.records != null && data.records.length > 0){
+                    for (let i = 0; i <data.records.length; i++) {
+                        let comment = data.records[i];
+                        let commentRefValue =  (proxy?.$refs['commentContent_'+comment.id] as any)[0];
+                        if(commentRefValue != undefined){
+                            renderBindNode(commentRefValue); 
+                        }
+                        
+                    }
+                }
             });
         })
         .catch((error: any) =>{
@@ -1239,7 +1177,7 @@
                         nodeHtml += 	'<div class="input-box">';
                         nodeHtml += 		'<input type="password" v-model.trim="hide_passwordList['+state.hidePasswordIndex+']" class="text" maxlength="30"  placeholder="密码">';
                       //  nodeHtml += 		'<input type="button" value="提交" class="button" @click="topicUnhide(10,'+state.hidePasswordIndex+');">';
-                        nodeHtml += 		'<div class="button" @click="topicUnhide(10,'+state.hidePasswordIndex+');">提交</div>';
+                        nodeHtml += 		'<div class="button" @click="onTopicUnhide_renderTemplate(10,'+state.hidePasswordIndex+');">提交</div>';
                       
                         nodeHtml += 	'</div>';
                         nodeHtml += '</div>';
@@ -1267,7 +1205,7 @@
                         nodeHtml += '<div class="hide-box">';
                         nodeHtml += 	'<Icon name="lock-solid-2" size="52px" class="background-image"></Icon>';
                         nodeHtml += 	'<div class="background-prompt">此处内容已被隐藏，支付‘'+childNode.getAttribute("input-value")+'’积分可见</div>';
-                        nodeHtml += 	'<div class="submit-box" @click="topicUnhide(40);">立即购买</div>';
+                        nodeHtml += 	'<div class="submit-box" @click="onTopicUnhide_renderTemplate(40);">立即购买</div>';
                         nodeHtml += '</div>';
                         childNode.innerHTML = nodeHtml;
                     }else if(childNode.getAttribute("hide-type") == "50"){
@@ -1275,7 +1213,7 @@
                         nodeHtml += '<div class="hide-box">';
                         nodeHtml += 	'<Icon name="lock-solid-2" size="52px" class="background-image"></Icon>';
                         nodeHtml += 	'<div class="background-prompt">此处内容已被隐藏，支付 ￥<span class="highlight">'+childNode.getAttribute("input-value")+'</span> 元可见</div>';
-                        nodeHtml += 	'<div class="submit-box" @click="topicUnhide(50);">立即购买</div>';
+                        nodeHtml += 	'<div class="submit-box" @click="onTopicUnhide_renderTemplate(50);">立即购买</div>';
                         nodeHtml += '</div>';
                         childNode.innerHTML = nodeHtml;
                     }
@@ -3021,7 +2959,6 @@
         .then((data: GiveRedEnvelope) => {
 
             state.giveRedEnvelope = {} as GiveRedEnvelope;
-            state.receiveRedEnvelopeList.length = 0;
 
             if(data){
                 state.giveRedEnvelope = data;
@@ -3050,6 +2987,7 @@
             return response?.data;
         })
         .then((data: PageView<ReceiveRedEnvelope>) => {
+        		state.receiveRedEnvelopeList.length = 0;
             if(data && data.records != null && data.records.length >0){
                 let receiveRedEnvelopeList = data.records;
                 if (receiveRedEnvelopeList != null && receiveRedEnvelopeList.length > 0) {
@@ -3188,32 +3126,6 @@
         
         next();
     });
-
-    //生命周期钩子 -- 响应数据修改时运行
-    onUpdated(() => {
-        nextTick(()=> {
-            let topicId:string = router.currentRoute.value.query.topicId != undefined ?router.currentRoute.value.query.topicId as string :'';
-            if(topicId != ''){
-                let topicRefValue = proxy?.$refs['topic_'+topicId];
-                if(topicRefValue != undefined){
-                    renderBindNode(topicRefValue); 
-                }
-            }
-            
-
-            if(state.commentList != null && state.commentList.length > 0){
-				for (let i = 0; i <state.commentList.length; i++) {
-					let comment = state.commentList[i];
-					let commentRefValue =  (proxy?.$refs['commentContent_'+comment.id] as any)[0];
-					if(commentRefValue != undefined){
-						renderBindNode(commentRefValue); 
-					}
-					
-				}
-			}
-        })
-    })
-
 
 
     onMounted(() => {
