@@ -57,11 +57,15 @@
                     <div class="questionList">
                         <div class="questionItem" v-for="question in state.pageView.records" >
                             <div class="avatarBox">
-                                <router-link tag="a" class="avatarLink" :to="{path:'/user/control/home',query: {userName: question.userName}}" target="_blank">
+                                <router-link tag="a" v-if="question.userName != null && question.userName != ''" class="avatarLink" :to="{path:'/user/control/home',query: {userName: question.userName}}" target="_blank">
                                     <img v-if="question.avatarName != null" :src="question.avatarPath+'100x100/'+question.avatarName" class="img">
                                     <img v-if="question.avatarName == null" :src="question.avatar" width="60" height="60" class="img"/>
                                        
                                 </router-link>
+                                <a class="avatarLink" v-if="question.userName == null || question.userName == ''">
+                                    <img :src="question.avatar" width="60" height="60" class="img"/>
+                                       
+                                </a>
                             </div>
                             
                             <div class="content clearfix">
@@ -102,7 +106,7 @@
                             </div>
                             
                             <div class="rank clearfix">
-                                <div :class="Long.fromString(question.adoptionAnswerId).gt(0) ? 'answers active ' : 'answers solve'">
+                                <div :class="Long.fromString(question.adoptionAnswerId).gt(0) ? 'answers solve' : 'answers active'">
                                     <template v-if="Long.fromString(question.answerTotal).gte(1000000)">999K+</template> <!-- 超过1000000显示999k+ -->
                                     <template v-else-if="Long.fromString(question.answerTotal).gte(1000)">{{Math.floor(parseFloat(question.answerTotal)/1000)}}k</template><!-- 向下取整 -->
                                     <template v-else>{{question.answerTotal}}</template>

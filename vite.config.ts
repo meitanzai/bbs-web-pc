@@ -8,6 +8,8 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import legacy from '@vitejs/plugin-legacy'
 import prismjs from "vite-plugin-prismjs";
 
+//import viteCompression from 'vite-plugin-compression';
+
 //把原先 @import 方式引入的变量，通过 readFile 读成字符串传递给 additionalData。解决scss @use 时，把$--color-primary这种变量作为private处理 additionalData: '@use \"./src/style/variables.scss\" as *; $-- color-primary: #19D4AE;'
 //import fs from 'fs'
 //const scssVariables = fs.readFileSync(path.join(__dirname, '../', 'assets/css/global.scss'), 'utf8')
@@ -49,6 +51,16 @@ export default defineConfig({
                 directives: true,//自动导入指令
             })],
         }),
+        /**
+        viteCompression({
+            //生成压缩包gz
+            verbose: true,//是否在控制台输出压缩结果
+            disable: false,//是否禁用
+            threshold: 10240,//体积大于 threshold 才会被压缩,单位 b
+            algorithm: 'gzip',//压缩算法,可选 [ 'gzip' , 'brotliCompress' ,'deflate' , 'deflateRaw']
+            ext: '.gz',//生成的压缩包后缀
+            deleteOriginFile: false//压缩后是否删除源文件
+        }),**/
         legacy({
             targets: ['defaults', 'ie >= 11', 'chrome 52','Firefox ESR',],  //需要兼容的目标列表，可以设置多个
         }),

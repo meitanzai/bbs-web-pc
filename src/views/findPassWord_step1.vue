@@ -2,8 +2,6 @@
 <template>
     <!-- 页头 -->
     <Header/>
-    <!-- 服务导航 -->
-    <ServiceNav/>
     <div class="main">
         <div class="main-container wrap backgroundModule main-fullScreen">
             <div class="findPassWordModule" >

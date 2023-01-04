@@ -98,7 +98,7 @@
                                 </div>		
                             </template>
                             
-                            <div class="favorite-formModule">
+                            <div class="favorite-formModule" v-if="state.question.userName != null && state.question.userName != ''">
                                  <!--加入收藏夹-->
                                  <span class="numberButton" @click="addFavorite(state.question.id)">
                                     <span class="button" >
@@ -203,7 +203,7 @@
                                         <router-link tag="a" class="userName" :to="{path:'/user/control/home',query: {userName: answer.userName}}">
                                            <span v-if="answer.nickname != null && answer.nickname != ''">{{answer.nickname}}</span>
                                            <span v-if="answer.nickname == null || answer.nickname == ''">{{answer.account}}</span>
-                                           <template if="answer.account == null || answer.account == ''">&nbsp;</template>
+                                           <template v-if="answer.account == null || answer.account == ''">&nbsp;</template>
                                         </router-link>
                                         <span v-if="answer.account == null || answer.account == ''" class='cancelNickname'>已注销</span> 
                                         <span class="userRoleName" v-for="roleName in answer.userRoleNameList">{{roleName}}</span>
@@ -250,7 +250,7 @@
                                                 <router-link tag="a" v-if="reply.account != null && reply.account != ''" class="userName" :to="{path:'/user/control/home',query: {userName: reply.userName}}">
                                                     <span v-if="reply.nickname != null && reply.nickname != ''">{{reply.nickname}}</span>
                                                     <span v-if="reply.nickname == null || reply.nickname == ''">{{reply.account}}</span>
-                                                    <template if=" reply.account == null || reply.account == ''">&nbsp;</template>
+                                                    <template v-if=" reply.account == null || reply.account == ''">&nbsp;</template>
                                                 </router-link>
 
                                                 <span class="userRoleName" v-for="roleName in reply.userRoleNameList">{{roleName}}</span>
@@ -410,11 +410,14 @@
                     <div class="userInfo-wrap clearfix" v-if="state.question != undefined && state.question != null && Object.keys(state.question).length>0">
                         <div class="userInfo">
                             <div class="author">
-                                <router-link tag="a" :to="{path:'/user/control/home',query: {userName: state.question.userName}}" target="_blank">
+                                <router-link tag="a" v-if="state.question.userName != null && state.question.userName != ''" :to="{path:'/user/control/home',query: {userName: state.question.userName}}" target="_blank">
                                     <img v-if="state.question.avatarName != null" :src="state.question.avatarPath+'100x100/'+state.question.avatarName" class="img">
                                     <img v-if="state.question.avatarName == null" :src="state.question.avatar" width="70" height="70" class="img"/>
                                        
                                 </router-link>
+                                <a v-if="state.question.userName == null || state.question.userName == ''">
+                                    <img :src="state.question.avatar" width="70" height="70" class="img"/>  
+                                </a>
                             </div>
                             <p class="name">
                                 <router-link tag="a" :to="{path:'/user/control/home',query: {userName: state.question.userName}}" target="_blank">
@@ -445,7 +448,7 @@
                                     <span>关注</span>
                                 </li>
                             </ul>
-                            <div class="action-button" v-if="!state.question.isStaff">
+                            <div class="action-button" v-if="!state.question.isStaff && state.question.userName != null && state.question.userName != ''">
                                 <!-- 关注用户 -->
                                 <span class="action-followBox" >
                                     <el-button type="primary" @click="addFollow(state.question.userName)">{{state.followText}}</el-button>
@@ -969,7 +972,7 @@
                     for (let i = 0; i <data.records.length; i++) {
                         let answer = data.records[i];
                         let answerRefValue =  (proxy?.$refs['answerContent_'+answer.id] as any);
-                        if(answerRefValue != undefined){
+                        if(answerRefValue != undefined && answerRefValue[0]){
                             renderBindNode(answerRefValue[0]); 
                         }
                         
@@ -2662,6 +2665,7 @@
                     padding: 6px 8px 6px 8px;
                     margin-right: 5px;
                     border-radius: 3px;
+                    margin-bottom: 6px;
                     color: #20a0ff;
                     background-color: #E8F3FF;
                     position:relative;
@@ -2677,11 +2681,12 @@
                 right: 5px;
                 top: 17px;
                 cursor:pointer;
+                color: $color-black-60;
                 .icon{
                     font-size: 16px;
                     margin-right: 3px;
                     position: relative;
-                    top: 2px;
+                    top: 3px;
                 }
                 span{
                     font-size: 15px;
@@ -2697,7 +2702,7 @@
                     font-size:22px;
                     border:none;
                     line-height:34px; 
-                    margin:9px 0 18px 0;
+                    margin:3px 0 18px 0;
                 }
                 .questionInfo{
                     color: $color-black-50; font-size: 14px;border-bottom:1px solid $color-black-20;padding-bottom: 5px;

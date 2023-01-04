@@ -47,7 +47,7 @@
                                     
                                 </div>
                             </div>
-                            <div class="favorite-formModule">
+                            <div class="favorite-formModule" v-if="state.topic.userName != null && state.topic.userName != ''">
                                 <!--加入收藏夹-->
                                 <span class="numberButton" @click="addFavorite(state.topic.id)">
                                     <span class="button" >
@@ -84,7 +84,7 @@
                                         <router-link tag="a" class="userName" :to="{path:'/user/control/home',query: {userName: comment.userName}}">
                                            <span v-if="comment.nickname != null && comment.nickname != ''">{{comment.nickname}}</span>
                                            <span v-if="comment.nickname == null || comment.nickname == ''">{{comment.account}}</span>
-                                           <template if="comment.account == null || comment.account == ''">&nbsp;</template>
+                                           <template v-if="comment.account == null || comment.account == ''">&nbsp;</template>
                                         </router-link>
                                         <span v-if="comment.account == null || comment.account == ''" class='cancelNickname'>已注销</span>   
 
@@ -130,7 +130,7 @@
                                                 <router-link tag="a" v-if="reply.account != null && reply.account != ''" class="userName" :to="{path:'/user/control/home',query: {userName: reply.userName}}">
                                                     <span v-if="reply.nickname != null && reply.nickname != ''">{{reply.nickname}}</span>
                                                     <span v-if="reply.nickname == null || reply.nickname == ''">{{reply.account}}</span>
-                                                    <template if=" reply.account == null || reply.account == ''">&nbsp;</template>
+                                                    <template v-if=" reply.account == null || reply.account == ''">&nbsp;</template>
                                                 </router-link>
 
                                                 <span class="userRoleName" v-for="roleName in reply.userRoleNameList">{{roleName}}</span>
@@ -399,11 +399,16 @@
                     <div class="userInfo-wrap clearfix" v-if="state.topic != undefined && state.topic != null && Object.keys(state.topic).length>0">
                         <div class="userInfo">
                             <div class="author">
-                                <router-link tag="a" :to="{path:'/user/control/home',query: {userName: state.topic.userName}}" target="_blank">
+                                <router-link v-if="state.topic.userName != null && state.topic.userName != ''" tag="a" :to="{path:'/user/control/home',query: {userName: state.topic.userName}}" target="_blank">
                                     <img v-if="state.topic.avatarName != null" :src="state.topic.avatarPath+'100x100/'+state.topic.avatarName" class="img">
                                     <img v-if="state.topic.avatarName == null" :src="state.topic.avatar" width="70" height="70" class="img"/>
                                        
                                 </router-link>
+                                <a v-if="state.topic.userName == null || state.topic.userName == ''">
+                                    <img v-if="state.topic.avatarName != null" :src="state.topic.avatarPath+'100x100/'+state.topic.avatarName" class="img">
+                                    <img v-if="state.topic.avatarName == null" :src="state.topic.avatar" width="70" height="70" class="img"/>
+                                       
+                                </a>
                             </div>
                             <p class="name">
                                 <router-link tag="a" :to="{path:'/user/control/home',query: {userName: state.topic.userName}}" target="_blank">
@@ -434,7 +439,7 @@
                                     <span>关注</span>
                                 </li>
                             </ul>
-                            <div class="action-button" v-if="!state.topic.isStaff">
+                            <div class="action-button" v-if="!state.topic.isStaff && state.topic.userName != null && state.topic.userName != ''">
                                 <!-- 关注用户 -->
                                 <span class="action-followBox" >
                                     <el-button type="primary" @click="addFollow(state.topic.userName)">{{state.followText}}</el-button>
@@ -448,7 +453,7 @@
                     </div>
 
                     <!-- 红包 -->
-                    <div class="redEnvelopeModule clearfix" v-if="state.giveRedEnvelope != undefined && state.giveRedEnvelope != null && Object.keys(state.giveRedEnvelope).length >0">
+                    <div class="redEnvelopeModule clearfix" v-if="state.topic != undefined && state.topic != null  && Object.keys(state.topic).length >0 && state.giveRedEnvelope != undefined && state.giveRedEnvelope != null && Object.keys(state.giveRedEnvelope).length >0">
                         <!-- 还有未被领取的红包 -->
                         <div class="redEnvelope" v-if="state.giveRedEnvelope.remainingQuantity >0">
                             <div class="box">
@@ -847,186 +852,188 @@
             return response?.data
         })
         .then((data: PageView<Comment>) => {
-            //清空
-            state.quoteElementNodes.length = 0;
-            state.editCommentElementNodes.length = 0;
+            if(data){
+                 //清空
+                state.quoteElementNodes.length = 0;
+                state.editCommentElementNodes.length = 0;
 
-            state.editReplyContentField.length = 0;
+                state.editReplyContentField.length = 0;
 
-          
-
-
-            state.commentList = {} as Array<Comment>;
+            
 
 
-            if(data.records != null && data.records.length >0){
-                for(let i:number=0; i<data.records.length; i++){
-                    let comment = data.records[i];
-                    if(comment.nickname != null && comment.nickname !=''){
-                        comment.avatar = letterAvatar(comment.nickname, 60);
-                    }else{
-                        comment.avatar = letterAvatar(comment.account, 60);
-                    }
-
-                    if(comment.replyList != null && comment.replyList.length >0){
-                        for(let j:number=0; j<comment.replyList.length; j++){
-                            let reply = comment.replyList[j];
-                            if(reply.nickname != null && reply.nickname !=''){
-                                reply.avatar = letterAvatar(reply.nickname, 38);
-                            }else{
-                                reply.avatar = letterAvatar(reply.account, 38);
-                            }
-                        }
-                    }
-                    
-
-                    //组装引用数据
-                    if(comment.quoteList != null && comment.quoteList.length >0){
-                        let quoteContent = "";
-                        for (let j = 0; j <comment.quoteList.length; j++) {
-                            let quote = comment.quoteList[j];
-
-                            let avatarHtml = "";
-                            if(quote.account != null && quote.account != ''){
-                                avatarHtml += "<router-link class=\"avatarBox\"  tag=\"a\" :to=\"{path: '/user/control/home', query: {userName: '"+quote.userName+"'}}\">";
-                                if(quote.avatarName != undefined && quote.avatarName != null && quote.avatarName != ''){
-                                    avatarHtml += "<img src=\""+quote.avatarPath+"100x100/"+quote.avatarName+"\">";			
-                                }		
-                                if(quote.avatarName == undefined || quote.avatarName == null || quote.avatarName == ''){
-                                    let char = (quote.nickname != null && quote.nickname != '') ? quote.nickname : quote.account;
-                                    let width = 22;//头像宽
-                                    avatarHtml += "<img src=\""+letterAvatar(char, width)+"\">";
-                                    
-                                }
-                                avatarHtml += "</router-link>";
-                            }
-                            
-                            if(quote.account == null || quote.account == ''){
-                                avatarHtml += "<span class='avatarBox'>";
-                                if(quote.avatarName != undefined && quote.avatarName != null && quote.avatarName != ''){
-                                    avatarHtml += "<img src=\""+quote.avatarPath+"100x100/"+quote.avatarName+"\">";			
-                                }		
-                                if(quote.avatarName == undefined || quote.avatarName == null || quote.avatarName == ''){
-                                    let char = (quote.nickname != null && quote.nickname != '') ? quote.nickname : quote.account;
-                                    let width = 22;//头像宽
-                                    avatarHtml += "<img src=\""+letterAvatar(char, width)+"\">";
-                                    
-                                }
-                                avatarHtml += "</span>";
-								avatarHtml += "<span class='cancelNickname'>已注销</span>";
-                                
-							}
-
-                            let quoteCancelAccountHtml = "";
-                            if(quote.account == null || quote.account == ''){
-                                quoteCancelAccountHtml = "<div class='cancelAccount'>此用户账号已注销</div>";
-                            }
-
-                            quoteContent = "<div class=\"quoteComment\">"+quoteContent+"<span class=\"userName\">"+avatarHtml+"<router-link tag=\"span\" :to=\"{path: '/user/control/home', query: {userName: '"+quote.userName+"'}}\">"+(quote.nickname != null && quote.nickname != '' ? escapeHtml(quote.nickname) : escapeHtml(quote.account))+"</router-link>&nbsp;的评论：</span><br/><div class=\"quoteContent\">"+quote.content+quoteCancelAccountHtml+"</div></div>";
-	
-                            
-                        }
-                        
-                        state.quoteData.set(comment.id, escapeVueHtml(quoteContent));
-                    }
+                state.commentList = {} as Array<Comment>;
 
 
-                    //定义回复数组
-                    let editReplyContentField_reply_array = [];
-                    
-                    //回复
-                    if(comment.replyList != null && comment.replyList.length >0){
-                        for (let j = 0; j <comment.replyList.length; j++) {
-                            let reply = comment.replyList[j];
-                            state.editReplyFormView.set(reply.id,false);
-                            
-                            editReplyContentField_reply_array.push(reply.content);
-                            
-                            
-                        }
-                    }
-                    
-                    //二维数组示例
-                    //let a=[1,2];
-                    //let b=[]; 
-                    //b[0]=a;//把数组a作为b数组的元素传入b数组中	 
-                    //alert(b[0][1]);//2
-                    state.editReplyContentField[i] = editReplyContentField_reply_array;//把数组editReplyContentField_reply_array作为editReplyContentField数组的元素传入editReplyContentField数组中
-										
-										
-										
-
-
-                    //处理图片放大标签
-                    let contentNode = document.createElement("div");
-                    contentNode.innerHTML = comment.content;
-                    bindNode(contentNode);
-                    comment.content = escapeVueHtml(contentNode.innerHTML);
-
-
-
-                }
-            }
-
-
-
-            state.commentList = data.records;
-            state.totalrecord = parseInt(data.totalrecord);//服务器返回的long类型已转为String类型
-            state.currentpage = data.currentpage;
-            state.totalpage = parseInt(data.totalpage);//服务器返回的long类型已转为String类型
-            state.maxresult = data.maxresult;
-
-            state.comment_loading = false;//是否显示评论骨架屏
-            state.isShowPage = true;//显示分页栏
-
-
-            nextTick(()=> {
-                //跳转到锚点
-
-                //跳转到评论
-                 if(commentId != null && commentId != '' && (replyId == null || replyId == '')){
-
-                    let commentRef = (proxy?.$refs['comment_'+commentId] as any);
-                    if(commentRef !=undefined){
-                        let commentRefValue = commentRef[0];
-                        window.scrollTo(0,commentRefValue.getBoundingClientRect().top-10);
-
-                    }
-                }
-
-                //跳转到回复
-                if(replyId != null && replyId != ''){
-                    for(let i = 0; i<state.replyElementNodes.length; i++){
-                        let replyElement = state.replyElementNodes[i];
-                        let _replyId = replyElement.getAttribute("replyId");
-                        if(replyId == _replyId){//跳转到当前回复
-                            window.scrollTo(0,replyElement.getBoundingClientRect().top-20);
-                            break;
-                        }
-                    }
-                }
-                
-
-               
-                //分页跳转
-                if(state.isPageCall && page != undefined && (commentId == null || commentId == '') && (replyId == null || replyId == '')){
-                    let top = (document.querySelector(".commentModule") as any).offsetTop
-                    window.scrollTo(0,top-10); //切换路由之后滚动到评论模块
-                }
-                state.isPageCall = false;
-
-
-                if(data.records != null && data.records.length > 0){
-                    for (let i = 0; i <data.records.length; i++) {
+                if(data.records != null && data.records.length >0){
+                    for(let i:number=0; i<data.records.length; i++){
                         let comment = data.records[i];
-                        let commentRefValue =  (proxy?.$refs['commentContent_'+comment.id] as any)[0];
-                        if(commentRefValue != undefined){
-                            renderBindNode(commentRefValue); 
+                        if(comment.nickname != null && comment.nickname !=''){
+                            comment.avatar = letterAvatar(comment.nickname, 60);
+                        }else{
+                            comment.avatar = letterAvatar(comment.account, 60);
+                        }
+
+                        if(comment.replyList != null && comment.replyList.length >0){
+                            for(let j:number=0; j<comment.replyList.length; j++){
+                                let reply = comment.replyList[j];
+                                if(reply.nickname != null && reply.nickname !=''){
+                                    reply.avatar = letterAvatar(reply.nickname, 38);
+                                }else{
+                                    reply.avatar = letterAvatar(reply.account, 38);
+                                }
+                            }
                         }
                         
+
+                        //组装引用数据
+                        if(comment.quoteList != null && comment.quoteList.length >0){
+                            let quoteContent = "";
+                            for (let j = 0; j <comment.quoteList.length; j++) {
+                                let quote = comment.quoteList[j];
+
+                                let avatarHtml = "";
+                                if(quote.account != null && quote.account != ''){
+                                    avatarHtml += "<router-link class=\"avatarBox\"  tag=\"a\" :to=\"{path: '/user/control/home', query: {userName: '"+quote.userName+"'}}\">";
+                                    if(quote.avatarName != undefined && quote.avatarName != null && quote.avatarName != ''){
+                                        avatarHtml += "<img src=\""+quote.avatarPath+"100x100/"+quote.avatarName+"\">";			
+                                    }		
+                                    if(quote.avatarName == undefined || quote.avatarName == null || quote.avatarName == ''){
+                                        let char = (quote.nickname != null && quote.nickname != '') ? quote.nickname : quote.account;
+                                        let width = 22;//头像宽
+                                        avatarHtml += "<img src=\""+letterAvatar(char, width)+"\">";
+                                        
+                                    }
+                                    avatarHtml += "</router-link>";
+                                }
+                                
+                                if(quote.account == null || quote.account == ''){
+                                    avatarHtml += "<span class='avatarBox'>";
+                                    if(quote.avatarName != undefined && quote.avatarName != null && quote.avatarName != ''){
+                                        avatarHtml += "<img src=\""+quote.avatarPath+"100x100/"+quote.avatarName+"\">";			
+                                    }		
+                                    if(quote.avatarName == undefined || quote.avatarName == null || quote.avatarName == ''){
+                                        let char = (quote.nickname != null && quote.nickname != '') ? quote.nickname : quote.account;
+                                        let width = 22;//头像宽
+                                        avatarHtml += "<img src=\""+letterAvatar(char, width)+"\">";
+                                        
+                                    }
+                                    avatarHtml += "</span>";
+                                    avatarHtml += "<span class='cancelNickname'>已注销</span>";
+                                    
+                                }
+
+                                let quoteCancelAccountHtml = "";
+                                if(quote.account == null || quote.account == ''){
+                                    quoteCancelAccountHtml = "<div class='cancelAccount'>此用户账号已注销</div>";
+                                }
+
+                                quoteContent = "<div class=\"quoteComment\">"+quoteContent+"<span class=\"userName\">"+avatarHtml+"<router-link tag=\"span\" :to=\"{path: '/user/control/home', query: {userName: '"+quote.userName+"'}}\">"+(quote.nickname != null && quote.nickname != '' ? escapeHtml(quote.nickname) : escapeHtml(quote.account))+"</router-link>&nbsp;的评论：</span><br/><div class=\"quoteContent\">"+quote.content+quoteCancelAccountHtml+"</div></div>";
+        
+                                
+                            }
+                            
+                            state.quoteData.set(comment.id, escapeVueHtml(quoteContent));
+                        }
+
+
+                        //定义回复数组
+                        let editReplyContentField_reply_array = [];
+                        
+                        //回复
+                        if(comment.replyList != null && comment.replyList.length >0){
+                            for (let j = 0; j <comment.replyList.length; j++) {
+                                let reply = comment.replyList[j];
+                                state.editReplyFormView.set(reply.id,false);
+                                
+                                editReplyContentField_reply_array.push(reply.content);
+                                
+                                
+                            }
+                        }
+                        
+                        //二维数组示例
+                        //let a=[1,2];
+                        //let b=[]; 
+                        //b[0]=a;//把数组a作为b数组的元素传入b数组中	 
+                        //alert(b[0][1]);//2
+                        state.editReplyContentField[i] = editReplyContentField_reply_array;//把数组editReplyContentField_reply_array作为editReplyContentField数组的元素传入editReplyContentField数组中
+                                            
+                                            
+                                            
+
+
+                        //处理图片放大标签
+                        let contentNode = document.createElement("div");
+                        contentNode.innerHTML = comment.content;
+                        bindNode(contentNode);
+                        comment.content = escapeVueHtml(contentNode.innerHTML);
+
+
+
                     }
                 }
-            });
+
+
+
+                state.commentList = data.records;
+                state.totalrecord = parseInt(data.totalrecord);//服务器返回的long类型已转为String类型
+                state.currentpage = data.currentpage;
+                state.totalpage = parseInt(data.totalpage);//服务器返回的long类型已转为String类型
+                state.maxresult = data.maxresult;
+
+                state.comment_loading = false;//是否显示评论骨架屏
+                state.isShowPage = true;//显示分页栏
+
+
+                nextTick(()=> {
+                    //跳转到锚点
+
+                    //跳转到评论
+                    if(commentId != null && commentId != '' && (replyId == null || replyId == '')){
+
+                        let commentRef = (proxy?.$refs['comment_'+commentId] as any);
+                        if(commentRef !=undefined){
+                            let commentRefValue = commentRef[0];
+                            window.scrollTo(0,commentRefValue.getBoundingClientRect().top-10);
+
+                        }
+                    }
+                    
+                    //跳转到回复
+                    if(replyId != null && replyId != ''){
+                        for(let i = 0; i<state.replyElementNodes.length; i++){
+                            let replyElement = state.replyElementNodes[i];
+                            let _replyId = replyElement.getAttribute("replyId");
+                            if(replyId == _replyId){//跳转到当前回复
+                                window.scrollTo(0,replyElement.getBoundingClientRect().top-20);
+                                break;
+                            }
+                        }
+                    }
+                    
+
+                
+                    //分页跳转
+                    if(state.isPageCall && page != undefined && (commentId == null || commentId == '') && (replyId == null || replyId == '')){
+                        let top = (document.querySelector(".commentModule") as any).offsetTop
+                        window.scrollTo(0,top-10); //切换路由之后滚动到评论模块
+                    }
+                    state.isPageCall = false;
+
+
+                    if(data.records != null && data.records.length > 0){
+                        for (let i = 0; i <data.records.length; i++) {
+                            let comment = data.records[i];
+                            let commentRefValue =  (proxy?.$refs['commentContent_'+comment.id] as any);
+                            if(commentRefValue != undefined && commentRefValue[0]){
+                                renderBindNode(commentRefValue[0]); 
+                            }
+                            
+                        }
+                    }
+                });
+            }
         })
         .catch((error: any) =>{
             console.log(error);
@@ -2946,6 +2953,7 @@
 
     //查询发红包内容
     const queryGiveRedEnvelopeContent = (giveRedEnvelopeId:string) => {
+    		state.receiveRedEnvelopeList.length = 0;
         proxy?.$axios({
             url: '/queryGiveRedEnvelopeContent',
             method: 'get',
@@ -2987,7 +2995,7 @@
             return response?.data;
         })
         .then((data: PageView<ReceiveRedEnvelope>) => {
-        		state.receiveRedEnvelopeList.length = 0;
+        		
             if(data && data.records != null && data.records.length >0){
                 let receiveRedEnvelopeList = data.records;
                 if (receiveRedEnvelopeList != null && receiveRedEnvelopeList.length > 0) {
@@ -3139,6 +3147,7 @@
 
         queryTopic(topicId,()=>{
             queryAddComment(topicId);
+            
             queryFollowerCount(state.topic.userName);//查询粉丝总数
             queryFollowing(state.topic.userName);//查询是否已关注该用户
             queryAnswerCount(state.topic.userName);

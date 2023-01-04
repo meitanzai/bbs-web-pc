@@ -37,11 +37,14 @@
                         <div class="topicItem" v-for="topic in state.pageView.records" >
                         
                             <div class="avatarBox">
-                                <router-link tag="a" class="avatarLink" :to="{path:'/user/control/home',query: {userName: topic.userName}}" target="_blank">
+                                <router-link tag="a"  v-if="topic.userName != null && topic.userName != ''" class="avatarLink" :to="{path:'/user/control/home',query: {userName: topic.userName}}" target="_blank">
                                     <img v-if="topic.avatarName != null" :src="topic.avatarPath+'100x100/'+topic.avatarName" class="img">
                                     <img v-if="topic.avatarName == null" :src="topic.avatar" width="62" height="62" class="img"/>
                                        
                                 </router-link>
+                                <a class="avatarLink" v-if="topic.userName == null || topic.userName == ''">
+                                    <img :src="topic.avatar" width="62" height="62" class="img"/>
+                                </a>
                             </div>
                             
                             <div class="content clearfix">
@@ -889,6 +892,7 @@
 			state.placeholder_DPlayer.destroy();//销毁播放器
 		}
         state.videoPlayerBind.length =0
+        state.videoPlayerList.length =0;
         state.playerHlsList.length = 0;//清空数组
         state.lastPlayerId = '';
 
@@ -1379,7 +1383,7 @@
                         }
                         
                         .summary{
-                            margin: 0px 50px 0 0;
+                            margin: 5px 50px 0 0;
                             font-size: 15px;
                             line-height: 28px;
                             font-weight:normal;

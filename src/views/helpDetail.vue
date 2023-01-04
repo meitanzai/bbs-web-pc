@@ -37,7 +37,7 @@
                                 <RenderTemplate :html="state.help.content"></RenderTemplate>       
                             </div>
                         </div>
-                        <el-result v-if="state.loading == false && state.help == null || Object.keys(state.help).length == 0" icon="info" title="没有找到相关记录"></el-result>
+                        <el-result v-if="state.loading == false && (state.help == null || Object.keys(state.help).length == 0)" icon="info" title="没有找到相关记录"></el-result>
                     </div> 
                     
                 </div>

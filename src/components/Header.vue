@@ -212,28 +212,6 @@
             store.commit('setUserInfoVersion', generateRandom());
         }
     }
-
-    //查询栏目
-    proxy?.$axios({
-        url: '/columnList',
-        method: 'get',
-        params:  {
-        },
-        showLoading: false,//是否显示加载图标
-        loadingMask:false,// 是否显示遮罩层
-    })
-    .then((response: AxiosResponse) => {
-        return response?.data
-    })
-    .then((data: Column[]) => {
-        state.loading = false;//关闭骨架屏
-        state.columnList = data;
-    })
-    .catch((error: any) =>{
-        console.log(error);
-    });
-
-
    
 
     //查询未读消息

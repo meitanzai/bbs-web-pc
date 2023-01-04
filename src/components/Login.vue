@@ -386,8 +386,6 @@
 
                             store.commit('setSystemUser', systemUser);
 
-
-
                             if (jumpUrl != null && jumpUrl != '' && jumpUrl != 'index') {
 
                                 let decryptObject = jumpDataFormat(jumpUrl);

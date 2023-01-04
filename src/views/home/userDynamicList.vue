@@ -69,18 +69,21 @@
                         <div :ref="'readMore_'+userDynamic.id">
                             <template v-if="userDynamic.module == 100">
                                 <div class="topicContent collapsedContainer" :ref="'userDynamicContent_'+userDynamic.id" >
-                                    <component v-bind:is ="analyzeDataComponent(userDynamic.topicContent)" v-bind="$props" />
+                                    <RenderTemplate @click-onTopicUnhide="onTopicUnhide" @load-onImageLoad="onImageLoad" :html="userDynamic.topicContent"></RenderTemplate>
+                                    
                                 </div>
                             </template>
                             <template v-if="userDynamic.module == 200">
                                 <div class="topicContent collapsedContainer" :ref="'userDynamicContent_'+userDynamic.id" >
-                                    <component v-bind:is ="analyzeDataComponent(userDynamic.commentContent)" v-bind="$props" />
+                                    <RenderTemplate @load-onImageLoad="onImageLoad" :html="userDynamic.commentContent"></RenderTemplate>
+                                    
                                 </div>
                             </template>
                             <template v-if="userDynamic.module == 300">
                                 <div class="collapsedContainer" >
                                 <div class="commentContent" :ref="'userDynamicContent_'+userDynamic.id" >
-                                    <component v-bind:is ="analyzeDataComponent(userDynamic.commentContent)" v-bind="$props" />
+                                    <RenderTemplate @load-onImageLoad="onImageLoad" :html="userDynamic.commentContent"></RenderTemplate>
+                                    
                                 </div>
                                 <div class="quoteContent">
 	                                <div class="text" >
@@ -96,12 +99,14 @@
                             </template>
                             <template v-if="userDynamic.module == 500">
                                 <div class="topicContent collapsedContainer" :ref="'userDynamicContent_'+userDynamic.id" >
-                                    <component v-bind:is ="analyzeDataComponent(userDynamic.questionContent)" v-bind="$props" />
+                                    <RenderTemplate @load-onImageLoad="onImageLoad" :html="userDynamic.questionContent"></RenderTemplate>
+                                    
                                 </div>
                             </template>
                             <template v-if="userDynamic.module == 600">
                                 <div class="topicContent collapsedContainer" :ref="'userDynamicContent_'+userDynamic.id" >
-                                    <component v-bind:is ="analyzeDataComponent(userDynamic.answerContent)" v-bind="$props" />
+                                    <RenderTemplate @load-onImageLoad="onImageLoad" :html="userDynamic.answerContent"></RenderTemplate>
+                                    
                                 </div>
                             </template>
                             <template v-if="userDynamic.module == 700">
@@ -188,12 +193,11 @@
     import { AxiosResponse } from 'axios'
     import { PageView,UserDynamic} from "@/types/index";
     import { letterAvatar } from '@/utils/letterAvatar';
-    import { ElImage} from 'element-plus';
-    import { getLanguageClassName} from '@/utils/tool';
-    import Icon from "@/components/icon/Icon.vue";
+    import { ElMessage, ElMessageBox} from 'element-plus';
+    import { getLanguageClassName, processErrorInfo} from '@/utils/tool';
     import Hls from 'hls.js';
     import DPlayer from 'dplayer';
-    import {escapeVueHtml } from '@/utils/escape';
+    import {escapeHtml, escapeVueHtml } from '@/utils/escape';
     import Prism from "prismjs";
 
     const { proxy } = getCurrentInstance() as ComponentInternalInstance;
@@ -353,6 +357,18 @@
                     renderVideoPlayer();//渲染视频播放器
                 }, 30);
 
+                if(data.records != null && data.records.length >0){
+                    for(let i:number=0; i<data.records.length; i++){
+                        let userDynamic = data.records[i];
+                        //渲染代码
+                        let userDynamicRefValue = proxy?.$refs['userDynamicContent_'+userDynamic.id];
+                        if(userDynamicRefValue != undefined){
+                            renderBindNode((userDynamicRefValue as any)[0]); 
+                        }
+                    }
+
+                }
+                
                 //"阅读更多"功能处理
                 readMoreProcess();
             });
@@ -379,54 +395,75 @@
         });
 	}
 
-    //动态解析模板数据
-    const analyzeDataComponent = computed(()=>{ 
-        return function (this: any,html:any) {
-            return {
-                template: "<div>"+ html +"</div>", // use content as template for this component 必须用<div>标签包裹，否则会有部分内容不显示
-                components: {//局部注册组件。注意：局部注册的组件在后代组件中并不可用
-                    'el-image': ElImage,
-                    'Icon': Icon,
-                },
-                data : function() {
-                    return {
-                        hide_passwordList :[],//话题隐藏密码
-                        error :{},
-                    };
-                },
-                mounted :function (this: any) {
-                    this.resumePlayerNodeData();
-                },
+     //话题解锁
+     const onTopicUnhide = (hideType: number,hidePassword: string,topicId:string) => {
+        let formData = new FormData();
+        formData.append('topicId', topicId);
+        formData.append('hideType',  String(hideType));
+        if(hideType == 10){
+            if(hidePassword != undefined && hidePassword != ""){
+                formData.append('password',  hidePassword);
+            }else{
+                ElMessage({
+                    showClose: true,
+                    message: '密码不能为空',
+                    type: 'error',
+                })
+
+                return;
+            }
+        }
+        ElMessageBox.confirm('确定解锁?',{
+            // type: 'warning',
+            cancelButtonText: "取消",
+            confirmButtonText: '确定'
+        })
+        .then(() => {
+            proxy?.$axios({
+                url: '/user/control/topic/unhide',
+                method: 'post',
+                data: formData
+            })
+            .then((response: AxiosResponse) => {
+                if(response){
+
+                    const result: any = response.data;
                 
-                methods: {
-                    //恢复播放器节点数据(vue组件切换时会自动刷新数据，视频播放器框在组件生成数据内容之后插入，组件刷新数据时播放器框会消失，组件刷新后需要用之前的节点数据恢复)
-                    resumePlayerNodeData : function(){
-                        nextTick(()=>{
-                            if(state.playerObjectList.length >0){
-                                for(let i=0; i< state.playerNodeList.length; i++){
-                                    let playerNode = state.playerNodeList[i] as any;
-                                    let playerId = playerNode.getAttribute("id");
-                                    let node:any = document.getElementById(playerId);
-                                    if(node != null){
-                                        node.parentNode.replaceChild(playerNode,node);
-                                    }
-                                    
-                                }
+                    if(JSON.parse(result.success)){
+                        ElMessage({
+                            showClose: true,
+                            message: '话题解锁成功',
+                            type: 'success',
+                            onClose:()=>{
+                                
                             }
-        
                         })
-                    },
-                    //图片加载成功触发事件
-                    imageLoad : function(e:Event){
-                        readMoreProcess();
+                        let page:number = router.currentRoute.value.query.page != undefined ? parseInt(router.currentRoute.value.query.page as string) :1;
+                        
+                        
+                        queryUserDynamicList(page);
+                        
+                    }else{
+                        //处理错误信息
+                        processErrorInfo(result.error as Map<string,string> ,  error,()=>{});
+                        
                     }
-
                 }
-                
-            };
-		};	
-    })
+            })
+            .catch((error: any) =>{
+                console.log(error);
+            });
+            
+        })
+        .catch(() => {
+            //取消
+        })
+    }
 
+    //图片加载成功触发事件
+    const onImageLoad = (e:Event) => {
+        readMoreProcess();
+    }
 
     //递归绑定节点参数
     const bindNode = (node:any,topicId:string) => {
@@ -441,6 +478,56 @@
             let random = Math.random().toString().slice(2);
             //判断是否是元素节点。如果节点是元素(Element)节点，则 nodeType 属性将返回 1。如果节点是属性(Attr)节点，则 nodeType 属性将返回 2。
             if(childNode.nodeType == 1){
+                 //处理隐藏内容
+                 if(childNode.nodeName.toLowerCase() == "hide" ){
+                    if(childNode.getAttribute("hide-type") == "10"){//输入密码可见
+                        var nodeHtml = "";
+                        nodeHtml += '<div class="hide-box">';
+                        nodeHtml += 	'<Icon name="lock-solid-2" size="52px" class="background-image"></Icon>';
+                        nodeHtml += 	'<div class="background-prompt">此处内容已被隐藏，输入密码可见</div>';
+                        nodeHtml += 	'<div class="input-box">';
+                        nodeHtml += 		'<input type="password" v-model.trim="hide_passwordList['+state.hidePasswordIndex+']" class="text" maxlength="30"  placeholder="密码">';
+                      //  nodeHtml += 		'<input type="button" value="提交" class="button" @click="topicUnhide(10,'+state.hidePasswordIndex+');">';
+                        nodeHtml += 		'<div class="button" @click="onTopicUnhide_renderTemplate(10,'+state.hidePasswordIndex+','+topicId+');">提交</div>';
+                      
+                        nodeHtml += 	'</div>';
+                        nodeHtml += '</div>';
+                        childNode.innerHTML = nodeHtml;
+                        
+                        state.hidePasswordIndex++;
+                    }
+                    else if(childNode.getAttribute("hide-type") == "20"){
+                        var nodeHtml = "";
+                        nodeHtml += '<div class="hide-box">';
+                        nodeHtml += 	'<Icon name="lock-solid-2" size="52px" class="background-image"></Icon>';
+                        nodeHtml += 	'<div class="background-prompt">此处内容已被隐藏，评论话题可见</div>';
+                        nodeHtml += '</div>';
+                        childNode.innerHTML = nodeHtml;
+                    }else if(childNode.getAttribute("hide-type") == "30"){
+                        var nodeHtml = "";
+                        nodeHtml += '<div class="hide-box">';
+                        nodeHtml += 	'<Icon name="lock-solid-2" size="52px" class="background-image"></Icon>';
+                        nodeHtml += 	'<div class="background-prompt">此处内容已被隐藏，等级达到‘'+escapeHtml(childNode.getAttribute("description"))+'’可见</div>';
+                        nodeHtml += '</div>';
+                        childNode.innerHTML = nodeHtml;
+                    }else if(childNode.getAttribute("hide-type") == "40"){
+                        var nodeHtml = "";
+                        nodeHtml += '<div class="hide-box">';
+                        nodeHtml += 	'<Icon name="lock-solid-2" size="52px" class="background-image"></Icon>';
+                        nodeHtml += 	'<div class="background-prompt">此处内容已被隐藏，支付‘'+childNode.getAttribute("input-value")+'’积分可见</div>';
+                        nodeHtml += 	'<div class="submit-box" @click="onTopicUnhide_renderTemplate(40,'+null+','+topicId+');">立即购买</div>';
+                        nodeHtml += '</div>';
+                        childNode.innerHTML = nodeHtml;
+                    }else if(childNode.getAttribute("hide-type") == "50"){
+                        var nodeHtml = "";
+                        nodeHtml += '<div class="hide-box">';
+                        nodeHtml += 	'<Icon name="lock-solid-2" size="52px" class="background-image"></Icon>';
+                        nodeHtml += 	'<div class="background-prompt">此处内容已被隐藏，支付 ￥<span class="highlight">'+childNode.getAttribute("input-value")+'</span> 元可见</div>';
+                        nodeHtml += 	'<div class="submit-box" @click="onTopicUnhide_renderTemplate(50,'+null+','+topicId+');">立即购买</div>';
+                        nodeHtml += '</div>';
+                        childNode.innerHTML = nodeHtml;
+                    }
+                }
                 //处理图片
                 if(childNode.nodeName.toLowerCase() == "img" ){
                     let src = childNode.getAttribute("src");
@@ -454,7 +541,7 @@
                         html = '<el-image src="'+store.state.apiUrl+src+'" '+style+' loading="lazy" ></el-image>';
                     }else{
                     
-                        html = '<el-image src="'+src+'" '+style+' :preview-src-list=["'+src+'"] lazy hide-on-click-modal @load="imageLoad"></el-image>';
+                        html = '<el-image src="'+src+'" '+style+' :preview-src-list=["'+src+'"] lazy hide-on-click-modal @load="imageLoad_renderTemplate"></el-image>';
                     }
                     //创建要替换的元素
                 //	let html = '<el-image src="'+src+'" '+style+' lazy></el-image>';
@@ -541,7 +628,6 @@
             }
         }
     }
-
 
     //递归渲染绑定节点
     const renderBindNode = (node:any) => {	
@@ -802,20 +888,6 @@
         queryUserDynamicList(page);
         
 	}
-    //生命周期钩子 -- 响应数据修改时运行
-    onUpdated(() => {
-        nextTick(()=> {
-            if(state.pageView.records != undefined && state.pageView.records != null && state.pageView.records.length >0){
-                for(let i:number=0; i<state.pageView.records.length; i++){
-                    let userDynamic = state.pageView.records[i];
-                    let refValue =  (proxy?.$refs['userDynamicContent_'+userDynamic.id] as any);
-                    if(refValue && refValue[0]){
-                        renderBindNode(refValue[0]); 
-                    }
-                }
-            }
-        })
-    })
     
     //卸载组件实例后调用
     onUnmounted (()=>{

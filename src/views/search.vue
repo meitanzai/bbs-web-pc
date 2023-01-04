@@ -12,10 +12,13 @@
                             <template v-for="searchResult in state.searchResultPage.records">
                                 <div class="topicItem" v-if="searchResult.indexModule == 10">
                                     <div class="avatarBox">
-                                        <router-link tag="a" class="avatarLink" :to="{path:'/user/control/home',query: {userName: searchResult.topic.userName}}" target="_blank">
+                                        <router-link tag="a" v-if="searchResult.topic.userName != null && searchResult.topic.userName != ''" class="avatarLink" :to="{path:'/user/control/home',query: {userName: searchResult.topic.userName}}" target="_blank">
                                             <img v-if="searchResult.topic.avatarName != null" :src="searchResult.topic.avatarPath+'100x100/'+searchResult.topic.avatarName" class="img">
                                             <img v-if="searchResult.topic.avatarName == null" :src="searchResult.topic.avatar" width="62" height="62" class="img"/>
                                         </router-link>
+                                        <a class="avatarLink" v-if="searchResult.topic.userName == null || searchResult.topic.userName == ''">
+                                           <img :src="searchResult.topic.avatar" width="62" height="62" class="img"/>
+                                        </a>
                                     </div>
                                     <div class="content clearfix">
 										<ul class="info">
@@ -64,10 +67,13 @@
                                 </div>
                                 <div class="topicItem" v-if="searchResult.indexModule == 20">
                                     <div class="avatarBox">
-                                        <router-link tag="a" class="avatarLink" :to="{path:'/user/control/home',query: {userName: searchResult.question.userName}}" target="_blank">
+                                        <router-link tag="a" v-if="searchResult.question.userName != null && searchResult.question.userName != ''" class="avatarLink" :to="{path:'/user/control/home',query: {userName: searchResult.question.userName}}" target="_blank">
                                             <img v-if="searchResult.question.avatarName != null" :src="searchResult.question.avatarPath+'100x100/'+searchResult.question.avatarName" class="img">
                                             <img v-if="searchResult.question.avatarName == null" :src="searchResult.question.avatar" width="62" height="62" class="img"/>
                                         </router-link>
+                                        <a class="avatarLink" v-if="searchResult.question.userName == null || searchResult.question.userName == ''">
+                                           <img :src="searchResult.question.avatar" width="62" height="62" class="img"/>
+                                        </a>
                                     </div>
                                     <div class="content clearfix">
 										<ul class="info">
