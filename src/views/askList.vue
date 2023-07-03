@@ -418,7 +418,7 @@
     });
 
     onMounted(() => {
-        let page:number = router.currentRoute.value.query.page != undefined ? parseInt(router.currentRoute.value.query.page as string) :1;
+        let page:number = (router.currentRoute.value.query.page != undefined && router.currentRoute.value.query.page != '') ? parseInt(router.currentRoute.value.query.page as string) :1;
 
         let questionTagId:string = router.currentRoute.value.query.questionTagId != undefined ?router.currentRoute.value.query.questionTagId as string :'';
         let filterCondition:string = router.currentRoute.value.query.filterCondition != undefined ?router.currentRoute.value.query.filterCondition as string :'';

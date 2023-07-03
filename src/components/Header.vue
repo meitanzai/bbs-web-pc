@@ -22,7 +22,8 @@
                                     </el-skeleton>
 
                                     <li v-for="column in state.columnList">
-                                        <router-link tag="a" :to="'/'+column.url">{{column.name}}</router-link>
+                                        <a :href="column.url" v-if="column.linkMode == 2" target="_blank">{{column.name}}</a>
+                                        <router-link tag="a" :to="'/'+column.url" v-else>{{column.name}}</router-link>
                                     </li>
                                 </ul>
                             </div>
@@ -420,7 +421,7 @@
             background-color: #fff;
             box-shadow: 0 0px 3px 0 rgba(0,0,0,.02), 0 4px 8px 0 rgba(0,0,0,.02);
             .box {
-                *zoom: 1;
+                zoom: 1;
                 height: 60px;
                 width: 1210px;
                 margin: 0 auto;

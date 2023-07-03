@@ -260,6 +260,11 @@ const routes = [
         component: () => import('@/views/home/userLoginLogList.vue')
     },
     {
+        path: '/user/control/reportList',//举报列表
+        name: 'reportList',
+        component: () => import('@/views/home/reportList.vue')
+    },
+    {
         path: '/findPassWord/step1',//找回密码 第一步
         name: 'findPassWord_step1',
         component: () => import('@/views/findPassWord_step1.vue')

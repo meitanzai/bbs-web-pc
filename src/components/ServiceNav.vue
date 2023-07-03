@@ -32,6 +32,7 @@
                         <el-dropdown-item @click="router.push({path: '/user/control/receiveRedEnvelopeList'})"> 收红包 </el-dropdown-item>
                         <el-dropdown-item @click="router.push({path: '/user/control/editUser'})"> 修改个人资料 </el-dropdown-item>
                         <el-dropdown-item @click="router.push({path: '/user/control/realNameAuthentication'})"> 实名认证 </el-dropdown-item>
+                        <el-dropdown-item @click="router.push({path: '/user/control/reportList'})"> 举报 </el-dropdown-item>
                         <el-dropdown-item @click="router.push({path: '/user/control/point'})"> 积分日志 </el-dropdown-item>
                         <el-dropdown-item @click="router.push({path: '/user/control/userLoginLogList'})"> 登录日志 </el-dropdown-item>
                     </el-dropdown-menu>

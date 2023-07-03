@@ -1,10 +1,10 @@
 @font-face {
   font-family: 'icomoon';
-  src:  url('fonts/icomoon.eot?pkbutg');
-  src:  url('fonts/icomoon.eot?pkbutg#iefix') format('embedded-opentype'),
-    url('fonts/icomoon.ttf?pkbutg') format('truetype'),
-    url('fonts/icomoon.woff?pkbutg') format('woff'),
-    url('fonts/icomoon.svg?pkbutg#icomoon') format('svg');
+  src:  url('fonts/icomoon.eot?te6uob');
+  src:  url('fonts/icomoon.eot?te6uob#iefix') format('embedded-opentype'),
+    url('fonts/icomoon.ttf?te6uob') format('truetype'),
+    url('fonts/icomoon.woff?te6uob') format('woff'),
+    url('fonts/icomoon.svg?te6uob#icomoon') format('svg');
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -25,6 +25,24 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+.cms-add-line:before {
+  content: "\e94b";
+}
+.cms-error-warning-line:before {
+  content: "\e947";
+}
+.cms-map-pin-line:before {
+  content: "\e948";
+}
+.cms-zoom-in-line:before {
+  content: "\e949";
+}
+.cms-login-box-line:before {
+  content: "\e94a";
+}
+.cms-logout-box-r-line:before {
+  content: "\e946";
+}
 .cms-arrow-left-s-line:before {
   content: "\e944";
 }

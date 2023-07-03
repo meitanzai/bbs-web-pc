@@ -50,6 +50,9 @@
                         <div class="role">
                             <i class="userRoleName" v-for="roleName in state.user.userRoleNameList" >{{roleName}}</i>	
                         </div>
+                        <div class="ipAddress" v-if="state.user.ipAddress != null && state.user.ipAddress != ''">
+                            <span><Icon name="map-pin-line" size="16px" class="icon"/>{{state.user.ipAddress}}</span>
+                        </div> 
                         <div class="clearfix"></div>
                         <div class="action-button" v-if="state.user.userName != null && state.user.userName != $store.state.systemUser.userName">
                            
@@ -194,6 +197,12 @@
                                 <router-link tag="a" to="/user/control/realNameAuthentication" class="a-pic">
                                     <div class="img" ><Icon name="realNameAuthentication" size="48px"/></div> 
                                     <h4 class="title">实名认证</h4>	
+                                </router-link>
+                            </li>
+                            <li class="item">
+                                <router-link tag="a" to="/user/control/reportList" class="a-pic">
+                                    <div class="img" ><Icon name="error-warning-line" size="48px"/></div> 	
+                                    <h4 class="title">举报</h4>
                                 </router-link>
                             </li>
                             <li class="item">
@@ -420,6 +429,7 @@
     import Prism from "prismjs";
     import { ElImage, ElMessage, ElMessageBox } from 'element-plus';
     import Icon from "@/components/icon/Icon.vue";
+    import { nativeQueryVideoRedirect, nativeRefreshToken } from '@/utils/http';
 
     const store = appStore();
     const router = useRouter();
@@ -1014,6 +1024,38 @@
                                     hls= new Hls();
                                     hls.loadSource(video.src);
                                     hls.attachMedia(video);
+                                    hls.config.xhrSetup = (xhr, url) => {
+                                        
+                                        if(url.startsWith(store.state.apiUrl+"videoRedirect?")){//如果访问视频重定向页
+                                            //如果使用重定向跳转时会自动将标头Authorization发送到seaweedfs，seaweedfs会报501错误 A header you provided implies functionality that is not implemented
+                                            //这里发送X-Requested-With标头到后端，让后端返回需要跳转的地址
+                                            let videoRedirectDate = {} as any;
+                                            nativeQueryVideoRedirect(url,function(date:any){
+                                                if(store.state.systemUser != null && Object.keys(store.state.systemUser).length>0 && date.isLogin == false && date.isPermission == false){
+                                                    //会话续期
+                                                    nativeRefreshToken();
+                                                    nativeQueryVideoRedirect(url,function(date:any){
+                                                        videoRedirectDate = date;
+                                                    });
+                                                }else{
+                                                    videoRedirectDate = date;
+                                                }
+                                                
+                                            });
+
+                                            if(videoRedirectDate != null && Object.keys(videoRedirectDate).length>0 && videoRedirectDate.redirect != ''){
+                                                //告诉hls重新发送ts请求
+                                                xhr.open("GET", videoRedirectDate.redirect, true);//用重定向后的地址请求
+                                                //xhr.setRequestHeader("X-Requested-With", 'XMLHttpRequest');
+                                            }
+                                        }else{
+                                            // 请求ts的url 添加参数 props.fileid
+                                            //url = url + "?t=" + props.fileid;
+                                            // 这一步必须 告诉hls重新发送ts请求
+                                            xhr.open("GET", url, true);
+                                            //xhr.setRequestHeader("X-Requested-With", 'XMLHttpRequest');
+                                        }
+                                    };
                                 },
                             },
                         }
@@ -1451,6 +1493,18 @@
                 border-radius: 2px;
                 color:#e2b46e;
                 background-color:#f8e7c4;
+            }
+        }
+        .ipAddress{
+            font-size: 16px;
+            color:  $color-black-50;
+            display: inline-block;
+            margin-top: 10px;
+            .icon{
+                font-size: 16px;
+                margin-right: 3px;
+                position: relative;
+                top: 2px;
             }
         }
         .action-button {

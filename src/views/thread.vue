@@ -4,7 +4,7 @@
     <Header/>
 
     <div class="main">
-        <div class="main-container wrap backgroundModule">
+        <div class="main-container wrap">
             <div class="topicContentModule">
                 <div class="left" v-if="state.topic == undefined || state.topic == null  || Object.keys(state.topic).length==0" >
                     <div class="topic-wrap" style="padding: 20px 20px;">
@@ -18,11 +18,19 @@
                                 {{state.topic.tagName}}
                             </router-link>
                         </div>
-                        <div class="editTopic" v-if="state.topic.userName == $store.state.systemUser.userName">
-                            <router-link tag="a" :to="{path:'/user/editTopic',query: {topicId: state.topic.id}}">
-                                <Icon name="pencil-alt" size="16px" class="icon"/>编辑
-                            </router-link>
-						</div>
+                        <div class="rightInfo">
+                            <div class="report" v-if="$store.state.systemUser != null && Object.keys($store.state.systemUser).length>0" @click="addReportUI(state.topic.id,10)">
+                                <span><Icon name="error-warning-line" size="16px" class="icon"/>举报</span>
+                            </div>
+                            <div class="editTopic" v-if="state.topic.userName == $store.state.systemUser.userName">
+                                <router-link tag="a" :to="{path:'/user/editTopic',query: {topicId: state.topic.id}}">
+                                    <Icon name="pencil-alt" size="16px" class="icon"/>编辑
+                                </router-link>
+                            </div>
+                            <div class="ipAddress" v-if="state.topic.ipAddress != null && state.topic.ipAddress != ''">
+                                <span><Icon name="map-pin-line" size="15px" class="icon"/>{{state.topic.ipAddress}}</span>
+                            </div>
+                        </div>
                         <div class="topicBox">
                             <div class="title">
                                 {{state.topic.title}}
@@ -36,7 +44,7 @@
                                 <div class="comment-icon"><Icon name="commentCount" size="16px"/></div>
                                 <div class="comment">{{state.topic.commentTotal}}个评论</div>
                             </div>
-                            <div class="topicContent">
+                            <div class="topicContent" :class="router.currentRoute.value.query.reportModule !=undefined && parseInt(router.currentRoute.value.query.reportModule as string) == 10 ? 'reportMark' : ''">
                                 <div class="lastUpdateTime" v-if="state.topic.lastUpdateTime != null">最后修改时间：{{state.topic.lastUpdateTime}}</div>
                                
 
@@ -71,7 +79,7 @@
 					<!-- 评论列表 -->
 					<div class="commentModule" v-if="state.commentList != null && Object.keys(state.commentList).length>0 && state.commentList.length >0">
                         <ol class="commentList">
-                            <div class="commentInfo" v-for="(comment,index) in state.commentList" :key="comment.id"  :ref="'comment_'+comment.id" >
+                            <div class="commentInfo" :class="router.currentRoute.value.query.reportModule !=undefined && parseInt(router.currentRoute.value.query.reportModule as string) == 20 && comment.id == router.currentRoute.value.query.commentId ? 'reportMark' : ''" v-for="(comment,index) in state.commentList" :key="comment.id"  :ref="'comment_'+comment.id" >
                                 <div class="comment-author">
                                     <router-link tag="a" v-if="comment.userName != null && comment.userName != ''" :to="{path:'/user/control/home',query: {userName: comment.userName}}">
                                         <img v-if="comment.avatarName != null" :src="comment.avatarPath+'100x100/'+comment.avatarName" class="img">
@@ -111,74 +119,152 @@
                                 <div class="clearfix"></div>
                                 
                                 <div class="replyList" v-if="comment.replyList != null && comment.replyList.length >0">
-                                    <ul class="box">
-                                        <li v-for="(reply,index2) in comment.replyList" :key="reply.id" :replyId="reply.id" :ref="handleReplyNodes">
-                                            <div class="reply-top" >
-                                                <router-link tag="a" v-if="reply.userName!= null && reply.userName != ''" class="avatarBox" :to="{path:'/user/control/home',query: {userName: reply.userName}}">
-                                                    <img v-if="reply.avatarName != null" :src="reply.avatarPath+'100x100/'+reply.avatarName" class="img">
-                                                    <img v-if="reply.avatarName == null" :src="reply.avatar" width="62" height="62" class="img"/>
-                                                    
-                                                </router-link>
+                                    <ul class="timeline box">
+                                        <li class="timeline-item replyItem-container" v-for="(reply,index2) in comment.replyList" :key="reply.id"  :replyId="reply.id" :ref="handleReplyNodes">
+                                 
+                                            <div class="tail" v-if="state.line.get(reply.id)"></div>
+                                            <div class="node node--normal" v-if="state.dot.get(reply.id)"></div>
+                                            <div class="replyItem">
+                                                <div :class="router.currentRoute.value.query.reportModule !=undefined && parseInt(router.currentRoute.value.query.reportModule as string) == 30 && reply.id == router.currentRoute.value.query.replyId ? 'reply-reportMark' : ''">
+                                                    <div class="reply-top" >
+                                                        <div class="reply-author">
+                                                            <router-link tag="a" v-if="reply.userName!= null && reply.userName != ''" class="avatarBox" :to="{path:'/user/control/home',query: {userName: reply.userName}}">
+                                                                <img v-if="reply.avatarName != null" :src="reply.avatarPath+'100x100/'+reply.avatarName" class="img">
+                                                                <img v-if="reply.avatarName == null" :src="reply.avatar" width="40" height="40" class="img"/>
+                                                                
+                                                            </router-link>
 
-                                                <span v-if="reply.userName == null && reply.avatarName == null"  class="avatarBox">
-                                                    <img :src="reply.avatar" width="62" height="62" class="img"/>
-                                                </span>
-                                               
-                                                <span v-if="reply.account == null || reply.account == ''" class='cancelNickname'>已注销</span>   
+                                                            <span v-if="reply.userName == null && reply.avatarName == null"  class="avatarBox">
+                                                                <img :src="reply.avatar" width="40" height="40" class="img"/>
+                                                            </span>
+                                                        
+                                                            <span v-if="reply.account == null || reply.account == ''" class='cancelNickname'>已注销</span>   
 
 
-                                                <router-link tag="a" v-if="reply.account != null && reply.account != ''" class="userName" :to="{path:'/user/control/home',query: {userName: reply.userName}}">
-                                                    <span v-if="reply.nickname != null && reply.nickname != ''">{{reply.nickname}}</span>
-                                                    <span v-if="reply.nickname == null || reply.nickname == ''">{{reply.account}}</span>
-                                                    <template v-if=" reply.account == null || reply.account == ''">&nbsp;</template>
-                                                </router-link>
+                                                            <router-link tag="a" v-if="reply.account != null && reply.account != ''" class="userName" :to="{path:'/user/control/home',query: {userName: reply.userName}}">
+                                                                <span v-if="reply.nickname != null && reply.nickname != ''">{{reply.nickname}}</span>
+                                                                <span v-if="reply.nickname == null || reply.nickname == ''">{{reply.account}}</span>
+                                                                <template v-if=" reply.account == null || reply.account == ''">&nbsp;</template>
+                                                            </router-link>
 
-                                                <span class="userRoleName" v-for="roleName in reply.userRoleNameList">{{roleName}}</span>
-                                                <span class="staff" v-if="reply.isStaff">官方人员</span>
-                                                <span class="master" v-if="reply.userName == state.topic.userName && reply.isStaff == state.topic.isStaff">作者</span>
+                                                            <span class="userRoleName" v-for="roleName in reply.userRoleNameList">{{roleName}}</span>
+                                                            <span class="staff" v-if="reply.isStaff">官方人员</span>
+                                                            <span class="master" v-if="reply.userName == state.topic.userName && reply.isStaff == state.topic.isStaff">作者</span>
+                                                            <div class="time"> {{reply.postTime}}</div>
+                                                        </div>
+                                                        <div class="friendInfo" v-if="reply.friendUserName != null && reply.friendUserName != ''">
+                                                            <span class="arrow"><icon name="caret-right" size="14px"/></span>
+                                                            <router-link tag="a" v-if="reply.friendUserName!= null && reply.friendUserName != ''" class="friendAvatarBox" :to="{path:'/user/control/home',query: {userName: reply.friendUserName}}">
+                                                                <img v-if="reply.friendAvatarName != null" :src="reply.friendAvatarPath+'100x100/'+reply.friendAvatarName" class="img">
+                                                                <img v-if="reply.friendAvatarName == null" :src="reply.friendAvatar" width="40" height="40" class="img"/>
+                                                                
+                                                            </router-link>
+                                                            
+                                                            <h2 class="nameInfo" >
+                                                                <span v-if="reply.friendAccount == null || reply.friendAccount == ''" class="cancelNickname">已注销</span>  
+                                                                
+                                                                <router-link tag="a" v-if="reply.friendAccount != null && reply.friendAccount != ''" class="userName" :to="{path:'/user/control/home',query: {userName: reply.friendUserName}}">
+                                                                    <span v-if="reply.friendNickname != null && reply.friendNickname != ''">{{reply.friendNickname}}</span>
+                                                                    <span v-if="reply.friendNickname == null || reply.friendNickname == ''">{{reply.friendAccount}}</span>
+                                                                    <template v-if=" reply.friendAccount == null || reply.friendAccount == ''">&nbsp;</template>
+                                                                </router-link>
+                                                                
+                                                                <span class="master" v-if="reply.friendAccount != null && reply.friendAccount != '' && reply.friendUserName == state.topic.userName && reply.isFriendStaff == state.topic.isStaff">作者</span>
+                                                            
+                                                            </h2>
+                                                        </div>
+                                                        <span class="ipAddress">
+                                                            <template v-if="reply.ipAddress != null && reply.ipAddress != ''">
+                                                                <icon name="map-pin-line" size="14px"/>
+                                                                <span class="ipAddress-text">{{reply.ipAddress}}</span>
+                                                            </template>
+                                                            <el-dropdown>
+                                                                <div class="more">
+                                                                    <i class="icon" ><icon name="ellipsis-v-solid" size="14px"/></i>
+                                                                </div>
+                                                            
+                                                                <template #dropdown>
+                                                                    <el-dropdown-menu>
+                                                                        <el-dropdown-item v-if="$store.state.systemUser != null && Object.keys($store.state.systemUser).length>0"  @click="addReplyFriendUI(comment.id,reply.id)"><i class="dropdown-menu-icon" ><icon name="reply" size="15px"/></i> 回复 </el-dropdown-item>
+                                                                        
+                                                                        <el-dropdown-item v-if="$store.state.systemUser != null && Object.keys($store.state.systemUser).length>0" @click="addReportUI(reply.id,30)"><i class="dropdown-menu-icon" ><icon name="error-warning-line" size="15px"/></i> 举报 </el-dropdown-item>
+                                                                        
+                                                                        <el-dropdown-item v-if="$store.state.systemUser != null && Object.keys($store.state.systemUser).length>0 && reply.userName ==  $store.state.systemUser.userName" @click="editReplyUI(reply)"><i class="dropdown-menu-icon" ><icon name="pencil-alt" size="15px"/></i> 编辑 </el-dropdown-item>
+                                                                        <el-dropdown-item v-if="$store.state.systemUser != null && Object.keys($store.state.systemUser).length>0 && reply.userName ==  $store.state.systemUser.userName" @click="onDeleteReply(reply.id)"><i class="dropdown-menu-icon" ><icon name="trash" size="15px"/></i> 删除 </el-dropdown-item>
+                                                                    </el-dropdown-menu>
+                                                                </template>
+                                                            </el-dropdown>
 
-                                                <span class="time">
-                                                    <a v-if="$store.state.systemUser != null && Object.keys($store.state.systemUser).length>0 && reply.userName ==  $store.state.systemUser.userName" @click="editReplyUI(reply)"><Icon name="pencil-alt" size="14px" class="icon"/>编辑</a>&nbsp;
-                                                    
-                                                    <a v-if="$store.state.systemUser != null && Object.keys($store.state.systemUser).length>0 && reply.userName ==  $store.state.systemUser.userName" @click="onDeleteReply(reply.id);"><Icon name="trash" size="14px" class="icon"/>删除</a>&nbsp;
-                                                    
-                                                    {{reply.postTime}}
-                                                </span>
-                                            </div>
-                                            <div style="clear:both; height: 0; line-height: 0; font-size: 0;"></div>
-                                            <div class="replyContent">
-                                                <div v-if="reply.account == null || reply.account == ''" class="cancelAccount">此用户账号已注销</div>
-                                                {{reply.content}}
-                                            </div>
-                                            <!-- 修改回复 -->
-                                            <div class="editCommentReply-formModule" v-show="state.editReplyFormView.get(reply.id)">
-		                                        <div class="editReply-wrap">
-                                                    <el-form label-position="right" size="large" :model="state" class="iconForm-container" @submit.native.prevent>
-                                                        <el-form-item :error="error.replyContent.get('editReply-'+reply.id)">
-                                                            <el-input type="textarea" :autosize="{minRows: 6}" placeholder="请输入内容" v-model="state.editReplyContentField[index][index2]"></el-input>
-                                                        </el-form-item>
-                                                        <el-form-item :error="error.captchaValue.get('editReply-'+reply.id)" v-if="state.showCaptcha.get('editReply-'+reply.id)" class="captcha-item">
-                                                            <el-row>
-                                                                <el-col :span="10" >
-                                                                    <el-input  v-model="state.captchaValue['editReply-'+reply.id]" @change.native="checkCaptchaValueRules('editReply-'+reply.id)"  class="captchaInput" maxlength="4" placeholder="验证码" clearable >
-                                                                        <template #prefix>
-                                                                            <Icon name="shield-check-line" size="16px"/>
-                                                                        </template>
-                                                                    </el-input>
-                                                                </el-col>
-                                                                <el-col :span="8" :offset="1">
-                                                                    <el-image :src="state.imgUrl.get('editReply-'+reply.id)" @click="replaceCaptcha('editReply-'+reply.id)"/>
-                                                                </el-col>
-                                                                <el-col :span="4" :offset="1">
-                                                                    <el-link type="primary" @click="replaceCaptcha('editReply-'+reply.id)" :underline="false" class="replaceCaptchaText">换一幅</el-link>
-                                                                </el-col>
-                                                            </el-row>
-                                                        </el-form-item>
-                                                        <el-form-item :error="error.reply.get('editReply-'+reply.id)">
-                                                            <el-button class="submitButton" type="primary" @mousedown.native="onEditReply(reply.id)" :disabled="state.allowSubmit.get('editReply-'+reply.id)">提交</el-button>
-                                                            <el-button class="submitButton" type="primary" @mousedown.native="onCancelEditReply(reply.id);" plain >取消</el-button>
-                                                        </el-form-item>
-                                                    </el-form>
+                                                        </span>
+                                                        
+                                                    </div>
+                                                    <div style="clear:both; height: 0; line-height: 0; font-size: 0;"></div>
+                                                    <div class="replyContent" @click="clickReplyLevel(comment.id,reply.id)">
+                                                        <div v-if="reply.account == null || reply.account == ''" class="cancelAccount">此用户账号已注销</div>
+                                                        {{reply.content}}
+                                                    </div>
+                                                    <!-- 修改回复 -->
+                                                    <div class="editCommentReply-formModule" v-show="state.editReplyFormView.get(reply.id)">
+                                                        <div class="editReply-wrap">
+                                                            <el-form label-position="right" size="large" :model="state" class="iconForm-container" @submit.native.prevent>
+                                                                <el-form-item :error="error.replyContent.get('editReply-'+reply.id)">
+                                                                    <el-input type="textarea" :autosize="{minRows: 6}" placeholder="请输入内容" v-model="state.editReplyContentField[index][index2]"></el-input>
+                                                                </el-form-item>
+                                                                <el-form-item :error="error.captchaValue.get('editReply-'+reply.id)" v-if="state.showCaptcha.get('editReply-'+reply.id)" class="captcha-item">
+                                                                    <el-row>
+                                                                        <el-col :span="10" >
+                                                                            <el-input  v-model="state.captchaValue['editReply-'+reply.id]" @change.native="checkCaptchaValueRules('editReply-'+reply.id)"  class="captchaInput" maxlength="4" placeholder="验证码" clearable >
+                                                                                <template #prefix>
+                                                                                    <Icon name="shield-check-line" size="16px"/>
+                                                                                </template>
+                                                                            </el-input>
+                                                                        </el-col>
+                                                                        <el-col :span="8" :offset="1">
+                                                                            <el-image :src="state.imgUrl.get('editReply-'+reply.id)" @click="replaceCaptcha('editReply-'+reply.id)"/>
+                                                                        </el-col>
+                                                                        <el-col :span="4" :offset="1">
+                                                                            <el-link type="primary" @click="replaceCaptcha('editReply-'+reply.id)" :underline="false" class="replaceCaptchaText">换一幅</el-link>
+                                                                        </el-col>
+                                                                    </el-row>
+                                                                </el-form-item>
+                                                                <el-form-item :error="error.reply.get('editReply-'+reply.id)">
+                                                                    <el-button class="submitButton" type="primary" @mousedown.native="onEditReply(reply.id)" :disabled="state.allowSubmit.get('editReply-'+reply.id)">提交</el-button>
+                                                                    <el-button class="submitButton" type="primary" @mousedown.native="onCancelEditReply(reply.id);" plain >取消</el-button>
+                                                                </el-form-item>
+                                                            </el-form>
+                                                        </div>
+                                                    </div>
+                                                    <!-- 回复对方 -->
+                                                    <div class="addCommentReplyFriend-formModule" v-show="state.addReplyFriendFormView.get(reply.id)">
+                                                        <div class="addReplyFriend-wrap">
+                                                            <el-form label-position="right" size="large" :model="state" class="iconForm-container" @submit.native.prevent>
+                                                                <el-form-item :error="error.replyContent.get('addReplyFriend-'+reply.id)">
+                                                                    <el-input type="textarea" :autosize="{minRows: 6}" placeholder="请输入内容" v-model="state.addReplyFriendContentField[reply.id]"></el-input>
+                                                                </el-form-item>
+                                                                <el-form-item :error="error.captchaValue.get('addReplyFriend-'+reply.id)" v-if="state.showCaptcha.get('addReplyFriend-'+reply.id)" class="captcha-item">
+                                                                    <el-row>
+                                                                        <el-col :span="10" >
+                                                                            <el-input  v-model="state.captchaValue['addReplyFriend-'+reply.id]" @change.native="checkCaptchaValueRules('addReplyFriend-'+reply.id)"  class="captchaInput" maxlength="4" placeholder="验证码" clearable >
+                                                                                <template #prefix>
+                                                                                    <Icon name="shield-check-line" size="16px"/>
+                                                                                </template>
+                                                                            </el-input>
+                                                                        </el-col>
+                                                                        <el-col :span="8" :offset="1">
+                                                                            <el-image :src="state.imgUrl.get('addReplyFriend-'+reply.id)" @click="replaceCaptcha('addReplyFriend-'+reply.id)"/>
+                                                                        </el-col>
+                                                                        <el-col :span="4" :offset="1">
+                                                                            <el-link type="primary" @click="replaceCaptcha('addReplyFriend-'+reply.id)" :underline="false" class="replaceCaptchaText">换一幅</el-link>
+                                                                        </el-col>
+                                                                    </el-row>
+                                                                </el-form-item>
+                                                                <el-form-item :error="error.reply.get('addReplyFriend-'+reply.id)">
+                                                                    <el-button class="submitButton" type="primary" @mousedown.native="onAddReplyFriend(comment.id,reply.id)" :disabled="state.allowSubmit.get('addReplyFriend-'+reply.id)">提交</el-button>
+                                                                    <el-button class="submitButton" type="primary" @mousedown.native="onCancelAddReplyFriend(reply.id);" plain >取消</el-button>
+                                                                </el-form-item>
+                                                            </el-form>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </li>
@@ -285,6 +371,9 @@
                                 
                                 <div class="tipBottom">
                                     <span class="a-toolbar">
+                                        <span class="ipAddress-text" v-if="comment.ipAddress != null && comment.ipAddress != ''">
+                                            <Icon name="map-pin-line" size="15px" class="icon"/>{{comment.ipAddress}}
+                                        </span>
                                         <a v-if="$store.state.systemUser != null && Object.keys($store.state.systemUser).length>0" @click="addReplyUI(comment.id)" >
                                             <Icon name="reply" size="15px" class="icon"/>回复
                                         </a>
@@ -292,6 +381,9 @@
                                         <a v-if="$store.state.systemUser != null && Object.keys($store.state.systemUser).length>0" @click="quoteCommentUI(comment)">
                                             <Icon name="quote" size="15px" class="icon"/>引用
                                         </a>
+                                        <span class="report" v-if="$store.state.systemUser != null && Object.keys($store.state.systemUser).length>0" @click="addReportUI(comment.id,20)">
+                                            <span><Icon name="error-warning-line" size="15px" class="icon"/>举报</span>
+                                        </span>
                                        
                                         <a v-if="$store.state.systemUser != null && Object.keys($store.state.systemUser).length>0 && comment.userName ==  $store.state.systemUser.userName" @click="editCommentUI(comment)">
                                             <Icon name="pencil-alt" size="15px" class="icon"/>编辑
@@ -386,143 +478,219 @@
                         </div>
 					</div>
 
+                    <!-- 添加举报 -->
+                    <el-dialog title="举报" v-model="state.addReportFormView" width="612px" :draggable="true" :close-on-click-modal="false">
+                        <div class="addReport-formModule" >
+                            <div class="addReport-wrap">
+                                <el-form label-position="right" size="large" :model="state" class="iconForm-container" @submit.native.prevent>
+                                    <el-form-item :error="error.reportTypeId">
+                                        <div class="reportType-container">
+                                            
+                                                <div class="reportType-group" v-for="reportType in state.reportTypeList">
+                                                    
+                                                    <!--  仅有一级分类 -->
+                                                    <div v-if="reportType.childType.length ==0">
+                                                        <ul class="reportType-list">
+                                                            <li class="reportType-item">
+                                                                <el-radio-group v-model="state.reportTypeId" @change="selectReportType(state.reportTypeList)">
+                                                                <el-radio :label="reportType.id" size="large">{{reportType.name}}</el-radio>
+                                                            </el-radio-group>
+                                                            </li>
+                                                        </ul>
+                                                        
+                                                    </div>
+                                                    <div v-else><!-- 含有多级分类 -->
+                                                        <p class="reportType-name">{{reportType.name}}</p>
+                                                        <ul class="reportType-list">
+                                                            <el-radio-group v-model="state.reportTypeId" @change="selectReportType(state.reportTypeList)">
+                                                            <li class="reportType-item" v-for="childReportType in reportType.childType">
+                                                                <el-radio :label="childReportType.id" size="large">{{childReportType.name}}</el-radio>
+                                                            </li>
+                                                        </el-radio-group>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            
+                                        </div>
+                                    </el-form-item>
+                                    <el-form-item v-if="state.show_giveReason" :error="error.reason">
+                                        <el-input type="textarea" :autosize="{minRows: 5}" placeholder="请填写举报理由" v-model="state.reason"></el-input>
+                                    </el-form-item>
+                                    <el-form-item v-if="state.show_giveReason && state.reportMaxImageUpload >0" :error="error.imageFile">
+                                        <el-upload ref="selectImage" v-model:file-list="state.fileList" action="#" :auto-upload="false" list-type="picture-card" :on-preview="openImagePreview" :on-exceed="onImageExceed" :accept="'.jpg,.jpeg,.gif,.png,.bmp'" :limit="state.reportMaxImageUpload">
+                                            <el-icon><Plus /></el-icon>
+                                        </el-upload>
+                                        <!-- 图片预览 -->
+                                        <el-image-viewer v-if="state.isImageViewer" @close="closeImagePreview" :url-list="[state.localImageUrl]" />
 
+                                    </el-form-item>
+                                    <el-form-item :error="error.captchaValue.get('report')" v-if="state.showCaptcha.get('report')" class="captcha-item">
+                                        <el-row>
+                                            <el-col :span="10" >
+                                                <el-input  v-model="state.captchaValue['report']" @change.native="checkCaptchaValueRules('report')"  class="captchaInput" maxlength="4" placeholder="验证码" clearable >
+                                                    <template #prefix>
+                                                        <Icon name="shield-check-line" size="16px"/>
+                                                    </template>
+                                                </el-input>
+                                            </el-col>
+                                            <el-col :span="8" :offset="1">
+                                                <el-image :src="state.imgUrl.get('report')" @click="replaceCaptcha('report')"/>
+                                            </el-col>
+                                            <el-col :span="4" :offset="1">
+                                                <el-link type="primary" @click="replaceCaptcha('report')" :underline="false" class="replaceCaptchaText">换一幅</el-link>
+                                            </el-col>
+                                        </el-row>
+                                    </el-form-item>
+                                    <el-form-item :error="error.report">
+                                        <el-button class="submitButton" type="primary" @mousedown.native="onAddReportFormSubmit" :disabled="state.allowSubmit.get('report')">提交</el-button>
+                                    </el-form-item>
+                                </el-form>
+                            </div>
+                        </div>
+                        
+                    </el-dialog>
                 </div>
-
+                
                 <div class="right">
-                    <div class="userInfo-wrap clearfix" v-if="state.topic == undefined || state.topic == null  || Object.keys(state.topic).length==0" >
-                        <div class="userInf" style="padding: 20px 20px;">
-                            <el-skeleton :loading="state.topic_loading"></el-skeleton>
-                        </div>
-                    </div>
-                    <!-- 话题用户信息 -->
-                    <div class="userInfo-wrap clearfix" v-if="state.topic != undefined && state.topic != null && Object.keys(state.topic).length>0">
-                        <div class="userInfo">
-                            <div class="author">
-                                <router-link v-if="state.topic.userName != null && state.topic.userName != ''" tag="a" :to="{path:'/user/control/home',query: {userName: state.topic.userName}}" target="_blank">
-                                    <img v-if="state.topic.avatarName != null" :src="state.topic.avatarPath+'100x100/'+state.topic.avatarName" class="img">
-                                    <img v-if="state.topic.avatarName == null" :src="state.topic.avatar" width="70" height="70" class="img"/>
-                                       
-                                </router-link>
-                                <a v-if="state.topic.userName == null || state.topic.userName == ''">
-                                    <img v-if="state.topic.avatarName != null" :src="state.topic.avatarPath+'100x100/'+state.topic.avatarName" class="img">
-                                    <img v-if="state.topic.avatarName == null" :src="state.topic.avatar" width="70" height="70" class="img"/>
-                                       
-                                </a>
-                            </div>
-                            <p class="name">
-                                <router-link tag="a" :to="{path:'/user/control/home',query: {userName: state.topic.userName}}" target="_blank">
-                                    {{state.topic.nickname != null && state.topic.nickname != '' ?state.topic.nickname : state.topic.account}}
-                                </router-link>
-                            </p>
-                            <div class="role" v-if="state.topic.userRoleNameList != null && state.topic.userRoleNameList.length >0">
-                                <i class="userRoleName" v-for="roleName in state.topic.userRoleNameList">{{roleName}}</i>
-                            </div>
-                            
-                            <div class="role" v-if="state.topic.isStaff">
-                                <i class="staff">官方人员</i>	
-                            </div>
-                            <ul>
-                                <li>
-                                    <span v-if="Long.fromString(state.answerCount).gt(999999)">{{state.answerCount}}+</span>
-                                    <span v-if="Long.fromString(state.answerCount).lte(999999)">{{state.answerCount}}</span>
-                                    <span>回答</span>
-                                </li>
-                                <li>
-                                    <span v-if="Long.fromString(state.followerCount).gt(999999)">{{state.followerCount}}+</span>
-                                    <span v-if="Long.fromString(state.followerCount).lte(999999)">{{state.followerCount}}</span>
-                                    <span>粉丝</span>
-                                </li>
-                                <li>
-                                    <span v-if="Long.fromString(state.followCount).gt(999999)">{{state.followCount}}+</span>
-                                    <span v-if="Long.fromString(state.followCount).lte(999999)">{{state.followCount}}</span>
-                                    <span>关注</span>
-                                </li>
-                            </ul>
-                            <div class="action-button" v-if="!state.topic.isStaff && state.topic.userName != null && state.topic.userName != ''">
-                                <!-- 关注用户 -->
-                                <span class="action-followBox" >
-                                    <el-button type="primary" @click="addFollow(state.topic.userName)">{{state.followText}}</el-button>
-		                        </span>
-                                <span class="privateMessageBox" >
-                                    <el-button type="primary" plain @click="toPrivateMessage(state.topic.userName)">发私信</el-button>
-                                </span>
-                            </div>
-                            
-                        </div>
-                    </div>
-
-                    <!-- 红包 -->
-                    <div class="redEnvelopeModule clearfix" v-if="state.topic != undefined && state.topic != null  && Object.keys(state.topic).length >0 && state.giveRedEnvelope != undefined && state.giveRedEnvelope != null && Object.keys(state.giveRedEnvelope).length >0">
-                        <!-- 还有未被领取的红包 -->
-                        <div class="redEnvelope" v-if="state.giveRedEnvelope.remainingQuantity >0">
-                            <div class="box">
-                                <div class="head-bg">
-                                    <div class="head"></div>
-                                </div>
-                                <div class="body">
-                                    <div class="content">
-                                        <span class="avatarBox" >
-                                            <img v-if="state.giveRedEnvelope.avatarName != null" :src="state.giveRedEnvelope.avatarPath+'100x100/'+state.giveRedEnvelope.avatarName" >
-                                            <img v-if="state.giveRedEnvelope.avatarName == null" :src="state.giveRedEnvelope.avatar" width="48" height="48"/>
-                                        </span>
-                                        <span>给大家发个红包</span>
+                    <div class="affix-container">
+                        <el-affix target=".affix-container" :offset="state.affix_offset" z-index="1" @scroll="onRightScroll">
+                            <div class="right-container" ref="right_ref">
+                                <div class="userInfo-wrap clearfix" v-if="state.topic == undefined || state.topic == null  || Object.keys(state.topic).length==0" >
+                                    <div class="userInf" style="padding: 20px 20px;">
+                                        <el-skeleton :loading="state.topic_loading"></el-skeleton>
                                     </div>
                                 </div>
-                                <div id="open" class="open-btn" v-if="state.giveRedEnvelope.accessUserUnwrap">已拆</div>
-                            
-                                <template v-if="!state.giveRedEnvelope.accessUserUnwrap">
-                                    <div id="notOpen" class="btn"  @click="grabRedEnvelope(state.giveRedEnvelope.id)">开</div>
-                                    <div id="open" class="open-btn" style="display: none;">已拆</div>
-                                </template>
-                            </div>
-                        </div>
-                        <div class="noRedEnvelope" v-if="state.giveRedEnvelope.remainingQuantity ==0">
-                            <div class="box">
-                                <div class="content">您来晚了，红包已被抢光</div>
-                            </div>
-                        </div>
-                    
-                  
-                    
-                        <!-- 已领取红包用户 -->
-                        <div class="receiveRedEnvelopeUser" v-if="state.receiveRedEnvelopeList != undefined && state.receiveRedEnvelopeList != null && state.receiveRedEnvelopeList.length >0">
-                            
-                            <div class="box">
-                                <el-tooltip popper-class="popper-transparent"  effect="dark" :hide-after="0" :show-after="100" placement="top-start" v-for="(receiveRedEnvelope,index) in state.receiveRedEnvelopeList" >
-                                    <template #content>
-                                        <template v-if="receiveRedEnvelope.receiveAccount != null && receiveRedEnvelope.receiveAccount !=''">
-                                            <span v-if="receiveRedEnvelope.receiveNickname != null && receiveRedEnvelope.receiveNickname !=''">{{receiveRedEnvelope.receiveNickname}}</span>
-                                            <span v-if="receiveRedEnvelope.receiveNickname == null || receiveRedEnvelope.receiveNickname ==''">{{receiveRedEnvelope.receiveAccount}}</span>
-                                            <span>获得 {{receiveRedEnvelope.amount}} 元</span>
-                                        </template> 
+                                <!-- 话题用户信息 -->
+                                <div class="userInfo-wrap clearfix" v-if="state.topic != undefined && state.topic != null && Object.keys(state.topic).length>0">
+                                    <div class="userInfo">
+                                        <div class="author">
+                                            <router-link v-if="state.topic.userName != null && state.topic.userName != ''" tag="a" :to="{path:'/user/control/home',query: {userName: state.topic.userName}}" target="_blank">
+                                                <img v-if="state.topic.avatarName != null" :src="state.topic.avatarPath+'100x100/'+state.topic.avatarName" class="img">
+                                                <img v-if="state.topic.avatarName == null" :src="state.topic.avatar" width="70" height="70" class="img"/>
+                                                
+                                            </router-link>
+                                            <a v-if="state.topic.userName == null || state.topic.userName == ''">
+                                                <img v-if="state.topic.avatarName != null" :src="state.topic.avatarPath+'100x100/'+state.topic.avatarName" class="img">
+                                                <img v-if="state.topic.avatarName == null" :src="state.topic.avatar" width="70" height="70" class="img"/>
+                                                
+                                            </a>
+                                        </div>
+                                        <p class="name">
+                                            <router-link tag="a" :to="{path:'/user/control/home',query: {userName: state.topic.userName}}" target="_blank">
+                                                {{state.topic.nickname != null && state.topic.nickname != '' ?state.topic.nickname : state.topic.account}}
+                                            </router-link>
+                                        </p>
+                                        <div class="role" v-if="state.topic.userRoleNameList != null && state.topic.userRoleNameList.length >0">
+                                            <i class="userRoleName" v-for="roleName in state.topic.userRoleNameList">{{roleName}}</i>
+                                        </div>
                                         
-                                        <span v-if="(receiveRedEnvelope.receiveAvatarName == null || receiveRedEnvelope.receiveAvatarName=='') && (receiveRedEnvelope.receiveAccount == null || receiveRedEnvelope.receiveAccount =='')">此用户账号已注销 获得 {{receiveRedEnvelope.amount}} 元</span>
+                                        <div class="role" v-if="state.topic.isStaff">
+                                            <i class="staff">官方人员</i>	
+                                        </div>
+                                        <ul>
+                                            <li>
+                                                <span v-if="Long.fromString(state.answerCount).gt(999999)">{{state.answerCount}}+</span>
+                                                <span v-if="Long.fromString(state.answerCount).lte(999999)">{{state.answerCount}}</span>
+                                                <span>回答</span>
+                                            </li>
+                                            <li>
+                                                <span v-if="Long.fromString(state.followerCount).gt(999999)">{{state.followerCount}}+</span>
+                                                <span v-if="Long.fromString(state.followerCount).lte(999999)">{{state.followerCount}}</span>
+                                                <span>粉丝</span>
+                                            </li>
+                                            <li>
+                                                <span v-if="Long.fromString(state.followCount).gt(999999)">{{state.followCount}}+</span>
+                                                <span v-if="Long.fromString(state.followCount).lte(999999)">{{state.followCount}}</span>
+                                                <span>关注</span>
+                                            </li>
+                                        </ul>
+                                        <div class="action-button" v-if="!state.topic.isStaff && state.topic.userName != null && state.topic.userName != ''">
+                                            <!-- 关注用户 -->
+                                            <span class="action-followBox" >
+                                                <el-button type="primary" @click="addFollow(state.topic.userName)">{{state.followText}}</el-button>
+                                            </span>
+                                            <span class="privateMessageBox" >
+                                                <el-button type="primary" plain @click="toPrivateMessage(state.topic.userName)">发私信</el-button>
+                                            </span>
+                                        </div>
+                                        
+                                    </div>
+                                </div>
 
-                                    </template>
-                                    <img v-if="receiveRedEnvelope.receiveAvatarName != null && receiveRedEnvelope.receiveAvatarName != ''" class='avatar'  :src="receiveRedEnvelope.receiveAvatarPath+'100x100/'+receiveRedEnvelope.receiveAvatarName"/>
-                                    <img v-if="(receiveRedEnvelope.receiveAvatarName == null || receiveRedEnvelope.receiveAvatarName=='') && (receiveRedEnvelope.receiveAccount != null && receiveRedEnvelope.receiveAccount !='')" class='avatar' :src="receiveRedEnvelope.receiveAvatar"/>
+                                <!-- 红包 -->
+                                <div class="redEnvelopeModule clearfix" v-if="state.topic != undefined && state.topic != null  && Object.keys(state.topic).length >0 && state.giveRedEnvelope != undefined && state.giveRedEnvelope != null && Object.keys(state.giveRedEnvelope).length >0">
+                                    <!-- 还有未被领取的红包 -->
+                                    <div class="redEnvelope" v-if="state.giveRedEnvelope.remainingQuantity >0">
+                                        <div class="box">
+                                            <div class="head-bg">
+                                                <div class="head"></div>
+                                            </div>
+                                            <div class="body">
+                                                <div class="content">
+                                                    <span class="avatarBox" >
+                                                        <img v-if="state.giveRedEnvelope.avatarName != null" :src="state.giveRedEnvelope.avatarPath+'100x100/'+state.giveRedEnvelope.avatarName" >
+                                                        <img v-if="state.giveRedEnvelope.avatarName == null" :src="state.giveRedEnvelope.avatar" width="48" height="48"/>
+                                                    </span>
+                                                    <span>给大家发个红包</span>
+                                                </div>
+                                            </div>
+                                            <div id="open" class="open-btn" v-if="state.giveRedEnvelope.accessUserUnwrap">已拆</div>
+                                        
+                                            <template v-if="!state.giveRedEnvelope.accessUserUnwrap">
+                                                <div id="notOpen" class="btn"  @click="grabRedEnvelope(state.giveRedEnvelope.id)">开</div>
+                                                <div id="open" class="open-btn" style="display: none;">已拆</div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    <div class="noRedEnvelope" v-if="state.giveRedEnvelope.remainingQuantity ==0">
+                                        <div class="box">
+                                            <div class="content">您来晚了，红包已被抢光</div>
+                                        </div>
+                                    </div>
+                                
+                            
+                                
+                                    <!-- 已领取红包用户 -->
+                                    <div class="receiveRedEnvelopeUser" v-if="state.receiveRedEnvelopeList != undefined && state.receiveRedEnvelopeList != null && state.receiveRedEnvelopeList.length >0">
+                                        
+                                        <div class="box">
+                                            <el-tooltip popper-class="popper-transparent"  effect="dark" :hide-after="0" :show-after="100" placement="top-start" v-for="(receiveRedEnvelope,index) in state.receiveRedEnvelopeList" >
+                                                <template #content>
+                                                    <template v-if="receiveRedEnvelope.receiveAccount != null && receiveRedEnvelope.receiveAccount !=''">
+                                                        <span v-if="receiveRedEnvelope.receiveNickname != null && receiveRedEnvelope.receiveNickname !=''">{{receiveRedEnvelope.receiveNickname}}</span>
+                                                        <span v-if="receiveRedEnvelope.receiveNickname == null || receiveRedEnvelope.receiveNickname ==''">{{receiveRedEnvelope.receiveAccount}}</span>
+                                                        <span>获得 {{receiveRedEnvelope.amount}} 元</span>
+                                                    </template> 
+                                                    
+                                                    <span v-if="(receiveRedEnvelope.receiveAvatarName == null || receiveRedEnvelope.receiveAvatarName=='') && (receiveRedEnvelope.receiveAccount == null || receiveRedEnvelope.receiveAccount =='')">此用户账号已注销 获得 {{receiveRedEnvelope.amount}} 元</span>
 
-                                    <img v-if="(receiveRedEnvelope.receiveAvatarName == null || receiveRedEnvelope.receiveAvatarName=='') && (receiveRedEnvelope.receiveAccount == null || receiveRedEnvelope.receiveAccount =='')" class='avatar' :src="receiveRedEnvelope.receiveAvatar"/>
-                                </el-tooltip>
+                                                </template>
+                                                <img v-if="receiveRedEnvelope.receiveAvatarName != null && receiveRedEnvelope.receiveAvatarName != ''" class='avatar'  :src="receiveRedEnvelope.receiveAvatarPath+'100x100/'+receiveRedEnvelope.receiveAvatarName"/>
+                                                <img v-if="(receiveRedEnvelope.receiveAvatarName == null || receiveRedEnvelope.receiveAvatarName=='') && (receiveRedEnvelope.receiveAccount != null && receiveRedEnvelope.receiveAccount !='')" class='avatar' :src="receiveRedEnvelope.receiveAvatar"/>
+
+                                                <img v-if="(receiveRedEnvelope.receiveAvatarName == null || receiveRedEnvelope.receiveAvatarName=='') && (receiveRedEnvelope.receiveAccount == null || receiveRedEnvelope.receiveAccount =='')" class='avatar' :src="receiveRedEnvelope.receiveAvatar"/>
+                                            </el-tooltip>
+                                        </div>
+                                        <div class="more" v-if="state.receiveRedEnvelope_more">
+                                            <Icon name="angle-down" size="15px" class="icon" title="更多" @click="queryReceiveRedEnvelopeUser(state.giveRedEnvelope.id,state.receiveRedEnvelopeCurrentPage+1)"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!--  相似话题 集合 -->
+                                <div class="likeTopicModule clearfix" v-if="state.likeTopicList != null && state.likeTopicList.length >0">
+                                    <div class="likeTopic">
+                                        <div class="title">相关话题</div>
+                                        <ul class="topicList">
+                                            <li class="topic-title " v-for="likeTopic in state.likeTopicList">
+                                                <router-link tag="a" :to="{path: '/thread', query:{ topicId : likeTopic.id}}">
+                                                    {{likeTopic.title}}
+                                                </router-link>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="more" v-if="state.receiveRedEnvelope_more">
-                                <Icon name="angle-down" size="15px" class="icon" title="更多" @click="queryReceiveRedEnvelopeUser(state.giveRedEnvelope.id,state.receiveRedEnvelopeCurrentPage+1)"/>
-                            </div>
-                        </div>
-                    </div>
-                    <!--  相似话题 集合 -->
-                    <div class="likeTopicModule clearfix" v-if="state.likeTopicList != null && state.likeTopicList.length >0">
-                        <div class="likeTopic">
-                            <div class="title">相关话题</div>
-                            <ul class="topicList">
-                                <li class="topic-title " v-for="likeTopic in state.likeTopicList">
-                                    <router-link tag="a" :to="{path: '/thread', query:{ topicId : likeTopic.id}}">
-                                        {{likeTopic.title}}
-                                    </router-link>
-                                </li>
-                            </ul>
-                        </div>
+                        </el-affix>
                     </div>
                 </div>
             </div>
@@ -544,11 +712,11 @@
 
 <script lang="ts" setup>
     import { onMounted, ref ,nextTick, getCurrentInstance, ComponentInternalInstance, reactive, onUnmounted, computed,onUpdated, watch, watchEffect,} from 'vue'
-    import { ElImage, ElMessage, ElMessageBox} from 'element-plus'
+    import { ElImage, ElMessage, ElMessageBox, UploadFile, UploadProps, UploadRawFile, UploadUserFile} from 'element-plus'
     import { appStore } from "@/store";
     import { useActiveMeta, useMeta} from 'vue-meta'
     import { onBeforeRouteUpdate, useRouter } from 'vue-router'
-    import { PageView,Topic,Comment, Reply, GiveRedEnvelope, ReceiveRedEnvelope } from "@/types/index";
+    import { PageView,Topic,Comment, Reply, GiveRedEnvelope, ReceiveRedEnvelope, ReportType } from "@/types/index";
     import { AxiosResponse } from 'axios';
     import { letterAvatar } from '@/utils/letterAvatar';
     import Icon from "@/components/icon/Icon.vue";
@@ -556,9 +724,10 @@
     import Hls from 'hls.js';
     import DPlayer from 'dplayer';
     import { escapeHtml, escapeVueHtml } from '@/utils/escape';
-    import { getLanguageClassName, processErrorInfo } from '@/utils/tool';
+    import { getAllUrlParam, getLanguageClassName, processErrorInfo } from '@/utils/tool';
     import { createEditor } from '@/utils/editor';
     import Prism from "prismjs";
+    import { nativeQueryVideoRedirect, nativeRefreshToken } from '@/utils/http';
 
     const { proxy } = getCurrentInstance() as ComponentInternalInstance;
     const store = appStore();
@@ -566,7 +735,7 @@
 
     //const formAddCommentRef = ref<FormInstance>();
     const formAddCommentContentRef = ref()
-
+    const right_ref = ref()
     
     //html页元信息
     const computedMeta = computed(() => ({ 
@@ -672,7 +841,27 @@
 		receiveRedEnvelopeCurrentPage:0,//领取红包用户当前页
 		receiveRedEnvelope_more:false,//是否显示更多领取红包用户
         
-        likeTopicList:[] as Array<Topic> //相似话题集合
+        likeTopicList:[] as Array<Topic>, //相似话题集合
+
+        addReportFormView:false,//举报表单
+        reportTypeId : ''as string,//举报分类Id
+        reason : ''as string,//举报理由
+        fileList : [] as UploadUserFile[],//上传表单图片列表
+        parameterId : '' as string,//举报参数Id
+		module: 0 as number,//举报模块
+        reportTypeList:[] as Array<ReportType>,//举报分类列表
+        reportMaxImageUpload: 0 as number,//图片允许最大上传数量
+        show_giveReason:false,//是否显示说明理由表单   
+
+        localImageUrl: '' as string | undefined,//本地图片地址 例如blob:http://127.0.0.1:8080/cfab3833-cbb0-4072-a576-feaf8fb19e5f
+        isImageViewer: false,//是否显示图片查看器
+
+        addReplyFriendContentField : {} as any, //添加回复对方内容项绑定 key:回复Id value:内容 示例{回复Id-1 : 内容,回复Id-2 : 内容}
+		addReplyFriendFormView : new Map(),//添加回复对方表单  key:回复Id value:是否显示
+        line : new Map(),//楼中楼的线  key:回复Id value:是否显示
+        dot : new Map(),//楼中楼的点  key:回复Id value:是否显示
+        
+        affix_offset:10,//固钉偏移距离
     });
 
      //错误
@@ -682,6 +871,10 @@
         captchaValue : new Map<string,string>(),
         comment: new Map<string,string>(),//评论和引用错误
         reply: new Map<string,string>(),//回复错误
+        reportTypeId:'',//举报分类Id
+        reason:'',//举报理由
+        imageFile:'',//举报图片
+        report:''//举报
     })
 
     //评论ref节点处理
@@ -878,9 +1071,17 @@
                             for(let j:number=0; j<comment.replyList.length; j++){
                                 let reply = comment.replyList[j];
                                 if(reply.nickname != null && reply.nickname !=''){
-                                    reply.avatar = letterAvatar(reply.nickname, 38);
+                                    reply.avatar = letterAvatar(reply.nickname, 40);
                                 }else{
-                                    reply.avatar = letterAvatar(reply.account, 38);
+                                    reply.avatar = letterAvatar(reply.account, 40);
+                                }
+
+                                if(reply.friendUserName != null && reply.friendUserName != ''){
+                                    if(reply.friendNickname != null && reply.friendNickname !=''){
+                                        reply.friendAvatar = letterAvatar(reply.friendNickname, 40);
+                                    }else{
+                                        reply.friendAvatar = letterAvatar(reply.friendAccount, 40);
+                                    }
                                 }
                             }
                         }
@@ -1128,6 +1329,38 @@
                                     hls = new Hls();
                                     hls.loadSource(video.src);
                                     hls.attachMedia(video);
+                                    hls.config.xhrSetup = (xhr, url) => {
+                                        
+                                        if(url.startsWith(store.state.apiUrl+"videoRedirect?")){//如果访问视频重定向页
+                                            //如果使用重定向跳转时会自动将标头Authorization发送到seaweedfs，seaweedfs会报501错误 A header you provided implies functionality that is not implemented
+                                            //这里发送X-Requested-With标头到后端，让后端返回需要跳转的地址
+                                            let videoRedirectDate = {} as any;
+                                            nativeQueryVideoRedirect(url,function(date:any){
+                                                if(store.state.systemUser != null && Object.keys(store.state.systemUser).length>0 && date.isLogin == false && date.isPermission == false){
+                                                    //会话续期
+                                                    nativeRefreshToken();
+                                                    nativeQueryVideoRedirect(url,function(date:any){
+                                                        videoRedirectDate = date;
+                                                    });
+                                                }else{
+                                                    videoRedirectDate = date;
+                                                }
+                                                
+                                            });
+
+                                            if(videoRedirectDate != null && Object.keys(videoRedirectDate).length>0 && videoRedirectDate.redirect != ''){
+                                                //告诉hls重新发送ts请求
+                                                xhr.open("GET", videoRedirectDate.redirect, true);//用重定向后的地址请求
+                                                //xhr.setRequestHeader("X-Requested-With", 'XMLHttpRequest');
+                                            }
+                                        }else{
+                                            // 请求ts的url 添加参数 props.fileid
+                                            //url = url + "?t=" + props.fileid;
+                                            // 这一步必须 告诉hls重新发送ts请求
+                                            xhr.open("GET", url, true);
+                                            //xhr.setRequestHeader("X-Requested-With", 'XMLHttpRequest');
+                                        }
+                                    };
                                 },
                             },
                         }
@@ -2360,7 +2593,454 @@
         })
     }
 
+    //选择举报分类
+    const selectReportType = (reportTypeList: Array<ReportType>) => {
+        nextTick(()=>{
+            for(let i =0; i<reportTypeList.length; i++){
+                let reportType = reportTypeList[i];
+                if(reportType.id == state.reportTypeId && reportType.giveReason){
+                    state.show_giveReason = true;
+                    return;
+                }
+                
+                for(let j =0; j<reportType.childType.length; j++){
+                    let childReportType = reportType.childType[j];
+                    if(childReportType.id == state.reportTypeId && childReportType.giveReason){
+                        state.show_giveReason = true;
+                        return;
+                    }
+                }
+            }
+            
+            state.show_giveReason = false;   
+             
+        })
+    }
 
+    //打开图片预览
+    const openImagePreview = (file: UploadFile) => {
+        state.localImageUrl = file.url;
+        state.isImageViewer = true;
+    }
+    //关闭图片预览
+    const closeImagePreview= () => {
+        state.localImageUrl = '';
+        state.isImageViewer = false;
+    }
+
+    //当超出限制时
+    const onImageExceed = (files: File[], uploadFiles: UploadUserFile[]) => {
+        if(state.reportMaxImageUpload >0  && state.fileList.length >= state.reportMaxImageUpload){
+            ElMessage({
+                showClose: true,
+                message: '已达到最大图片允许上传数量',
+                type: 'warning',
+            })
+        }
+    }
+   
+    
+    
+    //添加举报
+    const addReportUI = (parameterId: string,module: number) => {
+        let _key =  "report";
+        
+        if(store.state.systemUser == null || Object.keys(store.state.systemUser).length==0){
+            return;
+        }
+        state.allowSubmit.set(_key,true);//提交按钮disabled状态
+
+        //清空表单
+        state.reportTypeList.length = 0;
+        state.reportTypeId = '';//举报分类Id
+        state.reason = '';//理由
+        state.fileList.length = 0;
+        state.reportMaxImageUpload = 0;//图片允许最大上传数量
+        state.parameterId = '',//举报参数Id
+        state.module = 0,//举报模块
+        state.show_giveReason = false,//是否显示说明理由表单
+        
+        
+        state.showCaptcha.delete('report');//是否显示验证码
+        state.captchaKey.delete('report');//验证码key
+        Object.assign(state.captchaValue, {['report'] : ''});//验证码value
+
+        //清空所有错误
+        error.reportTypeId= "";//举报分类Id
+        error.reason= "";//理由
+        error.imageFile = "";
+        error.report= "";
+        error.captchaValue.delete('report');
+
+
+        proxy?.$axios({
+            url: '/user/queryAddReport',
+            method: 'get',
+            params:  {
+            },
+            showLoading: true,//是否显示加载图标
+            loadingMask:false,// 是否显示遮罩层
+        })
+        .then((response: AxiosResponse) => {
+            let data =  response.data;
+            if(data.allowReport){
+                
+
+
+                state.parameterId = parameterId;//举报参数Id
+				state.module = module;//举报模块
+
+                state.reportTypeList = data.reportTypeList;
+                state.reportMaxImageUpload = data.reportMaxImageUpload;
+
+                if(state.reportTypeList != null && state.reportTypeList.length >0){
+                    state.addReportFormView = true;
+                }else{
+                    ElMessage({
+                        showClose: true,
+                        message: '举报分类没开启',
+                        type: 'info',
+                    })
+                }
+
+                if (data.captchaKey != undefined && data.captchaKey != '') {
+                   
+                   state.showCaptcha.set(_key,true)
+                   state.captchaKey.set(_key,data.captchaKey)
+                   Object.assign(state.captchaValue, {[_key] : ''});
+                   replaceCaptcha(_key);//刷新验证码
+                }
+                state.allowSubmit.set(_key,false);;//提交按钮disabled状态
+            }else{
+                ElMessage({
+                    showClose: true,
+                    message: '举报功能已关闭',
+                    type: 'info',
+                })
+            }
+        })
+        .catch((error: any) =>{
+            console.log(error);
+        });
+    }
+
+    //添加举报 -- 提交数据
+    const onAddReportFormSubmit = () => {
+        let _key =  "report";
+        state.allowSubmit.set(_key,true);//提交按钮disabled状态
+
+        const p1 = new Promise<void>((resolve, reject) => {
+            error.captchaValue.set(_key,'');
+            if(state.captchaKey.get(_key) != undefined && state.captchaKey.get(_key) != null){
+
+                if(state.captchaValue[_key] != undefined && state.captchaValue[_key] != null && state.captchaValue[_key] != ''){
+                    checkCaptchaValue(state.captchaValue[_key].trim(), (err:string)=>{
+                        if(err != undefined){
+                            error.captchaValue.set(_key,err);
+                            state.allowSubmit.set(_key,false);//提交按钮disabled状态
+                        }else{
+                            resolve();
+                        }
+                    },_key) 
+                }else{
+                    error.captchaValue.set(_key,"验证码不能为空");
+                    state.allowSubmit.set(_key,false);//提交按钮disabled状态
+                }
+            }else{
+                resolve();
+            }
+        });
+
+        Promise.all([p1])
+            .then(() => {
+                //清空所有错误
+                error.captchaValue.delete(_key);
+
+                error.reportTypeId= "";//举报分类Id
+                error.reason= "";//理由
+                error.imageFile = "";
+                error.report= "";
+
+                let formData = new FormData();
+                
+
+                formData.append("parameterId", state.parameterId);
+                formData.append("module", String(state.module));
+            
+                if(state.reportTypeId){
+                    formData.append("reportTypeId", state.reportTypeId);
+                }
+                
+                if(state.reason){
+                    formData.append("reason", state.reason);
+                }
+
+                //图片
+                for(var i=0; i<state.fileList.length; i++){
+                    var fileData = state.fileList[i];
+                    formData.append("imageFile", fileData.raw!);
+                }
+                
+                if(state.captchaKey.get(_key) != undefined && state.captchaKey.get(_key) != null){
+                    //验证码Key
+                    formData.append('captchaKey', state.captchaKey.get(_key) as string);
+                }
+                
+                //验证码值
+                if(state.captchaValue[_key] != undefined && state.captchaValue[_key] != null && state.captchaValue[_key] != ''){
+                     formData.append('captchaValue', (state.captchaValue[_key] as string).trim());
+                }
+
+                proxy?.$axios({
+                    url: '/user/control/report/add',
+                    method: 'post',
+                    data: formData
+                })
+                .then((response: AxiosResponse) => {
+                    if(response){
+
+                        const result: any = response.data;
+                    
+                        if(JSON.parse(result.success)){
+                            ElMessage({
+                                showClose: true,
+                                message: '提交成功',
+                                type: 'success',
+                                onClose: ()=>{
+                                    
+                                }
+                            })
+                           
+
+                            state.addReportFormView = false;
+
+
+                            if(state.showCaptcha.get(_key) == true){
+                                Object.assign(state.captchaValue, {[_key] : ''});
+                            }
+                        }else{
+                            //处理错误信息
+                            for (const [key, value] of Object.entries(result.error) as [string, string][]){
+                                if(key == 'reportTypeId'){
+                                    error.reportTypeId = value;
+                                }else if(key == 'reason'){
+                                    error.reason = value;
+                                }else if(key == 'imageFile'){
+                                    error.imageFile = value;
+                                }else if(key == 'report'){
+                                    error.report = value;
+                                }else if(key == 'captchaValue'){
+                                    error.captchaValue.set(_key,value);
+                                }
+                            }
+
+                            if(result.captchaKey != null){
+                                state.showCaptcha.set(_key,true);
+                                state.captchaKey.set(_key,result.captchaKey);
+                                Object.assign(state.captchaValue, {[_key] : ''});
+                                replaceCaptcha(_key);
+                            }else{
+                                state.showCaptcha.set(_key,false);
+                            }
+
+                            
+                        }
+                        state.allowSubmit.set(_key,false);;//提交按钮disabled状态
+                    }
+                })
+                .catch((error: any) =>{
+                    console.log(error);
+                    state.allowSubmit.set(_key,false);//提交按钮disabled状态
+                });
+            }).catch(() => {
+                console.log("提交数据错误");
+            });
+    }
+
+    //添加回复对方表单
+    const addReplyFriendUI = ( commentId:string, replyId:string) => {
+        let _key =  "addReplyFriend-"+replyId;
+        if(state.addReplyFriendFormView.get(replyId) == true){//如果已打开
+			return;
+		}
+        if(store.state.systemUser == null || Object.keys(store.state.systemUser).length==0){
+            return;
+        }
+        state.allowSubmit.set(_key,true);//提交按钮disabled状态
+     
+        proxy?.$axios({
+            url: '/user/queryAddReply',
+            method: 'get',
+            params:  {
+                commentId: commentId
+            },
+            showLoading: false,//是否显示加载图标
+            loadingMask:false,// 是否显示遮罩层
+        })
+        .then((response: AxiosResponse) => {
+            if(response){
+                let data =  response.data;
+                if(data.allowReply){
+                    state.addReplyFriendFormView.set(replyId,true);
+
+                    if (data.captchaKey != undefined && data.captchaKey != '') {
+                        
+                        state.showCaptcha.set(_key,true)
+                        state.captchaKey.set(_key,data.captchaKey)
+                        Object.assign(state.captchaValue, {[_key] : ''});
+                        replaceCaptcha(_key);//刷新验证码
+                    }
+
+                    state.allowSubmit.set(_key,false);;//提交按钮disabled状态
+                }else{
+                    ElMessage({
+                        showClose: true,
+                        message: '不允许添加回复',
+                        type: 'info',
+                    })
+                }
+            }
+            
+        })
+        .catch((error: any) =>{
+            console.log(error);
+        });
+ 
+    }
+    //取消添加回复对方
+    const onCancelAddReplyFriend = (replyId:string) => {
+        
+        state.addReplyFriendFormView.set(replyId,false);
+        
+    }
+
+     //添加回复对方
+     const onAddReplyFriend = (commentId:string,replyId:string) => {
+        let _key =  "addReplyFriend-"+replyId;
+        state.allowSubmit.set(_key,true);//提交按钮disabled状态
+
+       
+
+        const p1 = new Promise<void>((resolve, reject) => {
+            error.captchaValue.set(_key,'');
+            if(state.captchaKey.get(_key) != undefined && state.captchaKey.get(_key) != null){
+
+                if(state.captchaValue[_key] != undefined && state.captchaValue[_key] != null && state.captchaValue[_key] != ''){
+                    checkCaptchaValue(state.captchaValue[_key].trim(), (err:string)=>{
+                        if(err != undefined){
+                            error.captchaValue.set(_key,err);
+                            state.allowSubmit.set(_key,false);//提交按钮disabled状态
+                        }else{
+                            resolve();
+                        }
+                    },_key) 
+                }else{
+                    error.captchaValue.set(_key,"验证码不能为空");
+                    state.allowSubmit.set(_key,false);//提交按钮disabled状态
+                }
+            }else{
+                resolve();
+            }
+        });
+
+        Promise.all([p1])
+            .then(() => {
+                //清空所有错误
+                error.replyContent.delete(_key);
+                error.captchaValue.delete(_key);
+                error.reply.delete(_key);
+
+                let formData = new FormData();
+                formData.append('commentId',  commentId); 
+
+                formData.append('friendReplyId',  replyId); 
+                
+                if(state.addReplyFriendContentField[replyId]){
+                    formData.append('content', state.addReplyFriendContentField[replyId]); 
+                }
+                
+                
+                if(state.captchaKey.get(_key) != undefined && state.captchaKey.get(_key) != null){
+                    //验证码Key
+                    formData.append('captchaKey', state.captchaKey.get(_key) as string);
+                }
+                
+                //验证码值
+                if(state.captchaValue[_key] != undefined && state.captchaValue[_key] != null && state.captchaValue[_key] != ''){
+                     formData.append('captchaValue', (state.captchaValue[_key] as string).trim());
+                }
+
+                proxy?.$axios({
+                    url: '/user/control/comment/addReply',
+                    method: 'post',
+                    data: formData
+                })
+                .then((response: AxiosResponse) => {
+                    if(response){
+
+                        const result: any = response.data;
+                    
+                        if(JSON.parse(result.success)){
+                            ElMessage({
+                                showClose: true,
+                                message: '提交成功',
+                                type: 'success',
+                                onClose: ()=>{
+                                    
+                                }
+                            })
+                           
+
+                            state.addReplyFriendContentField[replyId] = "";//清空
+
+                            state.addReplyFriendFormView.set(replyId,false);
+
+
+                            if(state.showCaptcha.get(_key) == true){
+                                Object.assign(state.captchaValue, {[_key] : ''});
+                            }
+
+                            let page:number|undefined = router.currentRoute.value.query.page != undefined ? parseInt(router.currentRoute.value.query.page as string) :undefined;
+                
+                            queryCommentList(state.topicId,'','',page);
+
+                        }else{
+                            //处理错误信息
+                            for (const [key, value] of Object.entries(result.error) as [string, string][]){
+                                if(key == 'content'){
+                                    error.replyContent.set(_key,value);
+                                }else if(key == 'friendReplyId'){
+                                    error.reply.set(_key,value);
+                                }else if(key == 'reply'){
+                                    error.reply.set(_key,value);
+                                }else if(key == 'captchaValue'){
+                                    error.captchaValue.set(_key,value);
+                                }
+                            }
+
+                            if(result.captchaKey != null){
+                                state.showCaptcha.set(_key,true);
+                                state.captchaKey.set(_key,result.captchaKey);
+                                Object.assign(state.captchaValue, {[_key] : ''});
+                                replaceCaptcha(_key);
+                            }else{
+                                state.showCaptcha.set(_key,false);
+                            }
+
+                            
+                        }
+                        state.allowSubmit.set(_key,false);;//提交按钮disabled状态
+                    }
+                })
+                .catch((error: any) =>{
+                    console.log(error);
+                    state.allowSubmit.set(_key,false);//提交按钮disabled状态
+                });
+            }).catch(() => {
+                console.log("提交数据错误");
+            });
+
+    }
 
     //添加回复表单
     const addReplyUI = (commentId:string) => {
@@ -2454,7 +3134,9 @@
                     for (let i = 0; i <state.commentList.length; i++) {
                         let comment = state.commentList[i];
                         if(comment.id == commentId){
-                            formData.append('content',  state.addReplyContentField[i]);
+                            if(state.addReplyContentField[i]){
+                                formData.append('content',  state.addReplyContentField[i]);
+                            }
                             break; 
                         }
                     }
@@ -2655,7 +3337,7 @@
                         if(comment.replyList != null && comment.replyList.length >0){
                             for (let j = 0; j <comment.replyList.length; j++) {
                                 let reply = comment.replyList[j];
-                                if(reply.id == replyId){
+                                if(reply.id == replyId && state.editReplyContentField [i][j]){
                                     formData.append('content', state.editReplyContentField [i][j]); 
                                 }
                             }
@@ -2791,7 +3473,7 @@
 
                         state.addReplyFormView.set(replyId,false);
                         state.editReplyFormView.set(replyId,false);
-
+                        state.addReplyFriendFormView.set(replyId,false);
                         //重置表单
                         //formAddCommentRef.value?.resetFields();
                         if(state.showCaptcha.get(_key) == true){
@@ -3093,6 +3775,118 @@
         });
     }
     
+    //点击回复层级
+    const clickReplyLevel = (commentId:string,replyId:string) => {
+       
+       //是否点击已选中的项
+       let isSelectedItem = false;
+
+
+       if(state.dot.size >0){
+           let lastFriendReplyId = [...state.dot][state.dot.size-1];//最后一个元素
+           if(lastFriendReplyId[0] == replyId){
+               isSelectedItem = true;
+           }
+       }
+
+       state.dot.clear();
+       state.line.clear();
+       if(!isSelectedItem){
+           showReplyLevel(commentId,replyId);
+       }
+       
+   }
+
+   //展示回复层级
+   const showReplyLevel = (commentId:string,replyId:string) => {
+
+       let dotArray = new Array();
+       let replyList = [] as Array<Reply>;
+       if(state.commentList != null && state.commentList.length > 0){
+           A:for (let i = 0; i <state.commentList.length; i++) {
+               let comment = state.commentList[i];
+               
+                if(comment.id == commentId){
+                   //回复
+                   if(comment.replyList != null && comment.replyList.length >0){
+                       replyList = comment.replyList;
+                       for (let j = 0; j <comment.replyList.length; j++) {
+                           let reply = comment.replyList[j];
+                           if(reply.id == replyId && reply.friendUserName != null && reply.friendUserName != ''){
+                               let friendReplyIdArray = reply.friendReplyIdGroup.split(",");
+                               for (let k = 0; k <friendReplyIdArray.length; k++) {
+                                   let friendReplyId = friendReplyIdArray[k];
+                                   if(friendReplyId != '' && friendReplyId != '0'){
+                                       dotArray.push(friendReplyId);
+                                   }
+                               }
+                               break A;
+                           }
+                       }
+                   }
+                }                       
+               
+           }
+       }
+
+       //第一个有效层级
+       let firstLevel = '';
+
+       A:for (let i = 0; i <dotArray.length; i++) {
+           let friendReplyId = dotArray[i];
+           for (let j = 0; j <replyList.length; j++) {
+               let reply = replyList[j];
+               if(reply.id == friendReplyId){
+                   firstLevel = friendReplyId;
+                   break A;
+               }
+           }
+       }
+
+       //过滤无效的点
+       A:for (let i = dotArray.length - 1; i >= 0; i--) {
+           let friendReplyId = dotArray[i];
+           for (let j = 0; j <replyList.length; j++) {
+               let reply = replyList[j];
+               if(reply.id == friendReplyId){
+                   continue A;
+               }
+           }
+           dotArray.splice(i, 1);
+       }
+
+       if(dotArray.length >0){
+           for (let i = 0; i <dotArray.length; i++) {
+               let friendReplyId = dotArray[i];
+               state.dot.set(friendReplyId,true);//楼中楼的点
+           }
+           for (let i = 0; i <replyList.length; i++) {
+               let reply = replyList[i];
+               if(reply.id == firstLevel){
+                   state.line.set(reply.id,true);//楼中楼的线
+                   continue;
+               }
+               if(reply.id == replyId){
+                   break;
+               }
+               if(state.line.size >0){
+                   state.line.set(reply.id,true);//楼中楼的线
+               }
+           }
+
+           state.dot.set(replyId,true);//楼中楼点击的层
+        }
+    }
+
+    //右边栏滚动事件
+    const onRightScroll = (value: { scrollTop: number, fixed: boolean }) => {
+        let clientHeight = document.documentElement.clientHeight;
+        let rightOffsetHeight = right_ref.value.offsetHeight;
+        if(rightOffsetHeight > clientHeight){
+            state.affix_offset = -(rightOffsetHeight - clientHeight + 10);
+        }
+    }
+   
 
   
     //导航守卫
@@ -3173,9 +3967,15 @@
 </script>
 
 <style scoped lang="scss">
+:deep(.dropdown-menu-icon){
+    margin-right: 4px;
+    position: relative;
+    top: 3px;
+}
 .topicContentModule{
+    display: flex;
     .left {
-        float: left;
+        flex: 1 0 auto;
         width: 900px;
         height: auto;
         .topic-wrap{
@@ -3202,20 +4002,52 @@
                     }
                 }
             }
-            .editTopic{
+            .rightInfo{
                 position:absolute; 
-                right: 5px;
+                right: 15px;
                 top: 20px;
-                .icon{
-                    margin-right: 3px;
-                    position: relative;
-                    top: 3px;
+                font-size: 0px;
+
+                .ipAddress{
+                    float: right;
+                    .icon{
+                        margin-right: 3px;
+	                    position: relative;
+                        top: 2px;
+                    }
+                    span{
+                        font-size: 15px;
+                        color:$color-black-50;
+                    }
                 }
-                a{
-                    font-size: 15px;
-                    margin-right: 8px;
+                .editTopic{
+                    float: right;
+                    .icon{
+                        margin-right: 3px;
+                        position: relative;
+                        top: 3px;
+                    }
+                    a{
+                        font-size: 15px;
+                        margin-left: 10px;
+                    }
+                }
+                .report{
+                    float: right;
+                    .icon{
+                        margin-right: 3px;
+                        position: relative;
+                        top: 3px;
+                    }
+                    span{
+                        font-size: 15px;
+                        margin-left: 10px;
+                        color:$color-black-50;
+                        cursor:pointer;
+                    }
                 }
             }
+
             .topicBox{
                 height: auto;
                 padding:15px 15px 25px 15px;
@@ -3527,108 +4359,125 @@
                         white-space:pre-wrap;
                     }
                 }
+                //举报标记
+                .reportMark{
+                    &:before{
+                        content: " ";
+                        position: absolute;
+                        top: 0px;
+                        left: -8px;
+                        bottom:0px;
+                        border-left: 5px solid #f89898;
+                    }
+                }
             }
         }
     }
     .right{
-        float: right;
+        order: 2;
+        flex: 0 0 auto;
         width: 300px;
         height: auto;
-        padding-bottom: 10px;
-        .userInfo-wrap{
-            background: #fff;
-            box-shadow: 0 0px 3px 0 rgba(0,0,0,.02), 0 4px 8px 0 rgba(0,0,0,.02);
-            .userInfo {
-                padding: 20px 0 20px 0;
-                margin-left:8px;
-                margin-right:8px;
-                height: auto;
-                overflow: hidden;
-                position: relative;
-                .author{
-                    text-align: center;
-                    img{
-                        width: 70px;
-                        height: 70px;
-                        border-radius: 50%;
-                    
-                    }
-                }
-                .name{
-                    font-size: 18px;
-                    font-weight: 600;
-                    text-align: center;
-                    margin:14px 0 4px 0;
-                    a{
-                        color: $color-black-70;
-                    }
-                }
-                .role{
-                    text-align: center;
-                    .userRoleName{
-                        display: inline-block;
-                        white-space:nowrap;
-                        vertical-align: middle;
-                        padding: 2px 4px;
-                        margin-right:5px;
-                        font-size: 13px;
-                        line-height: 16px;
-                        -webkit-border-radius: 2px;
-                        -moz-border-radius: 2px;
-                        border-radius: 2px;
-                        color:#e2b46e;
-                        background-color:#f8e7c4;
-                    }
-                    .staff{
-                        display: inline-block;
-                        white-space:nowrap;
-                        vertical-align: middle;
-                        padding: 2px 4px;
-                        font-size: 13px;
-                        line-height: 16px;
-                        -webkit-border-radius: 2px;
-                        -moz-border-radius: 2px;
-                        border-radius: 2px;
-                        color:#4CD263;
-                        background-color:#cafcc7;
-                    }
-                }
-                ul{
-                    width: 100%;
+        margin-left: 10px;
+        .affix-container{
+            height: 100%;
+        }
+        .right-container{
+            .userInfo-wrap{
+                background: #fff;
+                box-shadow: 0 0px 3px 0 rgba(0,0,0,.02), 0 4px 8px 0 rgba(0,0,0,.02);
+                .userInfo {
+                    padding: 20px 0 20px 0;
+                    margin-left:8px;
+                    margin-right:8px;
                     height: auto;
                     overflow: hidden;
-                    padding: 15px 0 18px 0;
-                    border-top: 1px solid $color-black-20;
-                    margin-top: 20px;
-                    li{
-                        float: left;
-                        width: 33%;
-                        span{
-                            display: block;
-                            text-align: center;
-                            a{
-                                color: #333;
-                                margin-bottom: 0px;
-                            }
-                            &:nth-child(1){
-                                font-size: 16px;
-                                font-weight: 600;
-                                color: $color-black-80;
-                            }
-                            &:nth-child(2){
-                                font-size: 12px;
-                                color: $color-black-60;
+                    position: relative;
+                    .author{
+                        text-align: center;
+                        img{
+                            width: 70px;
+                            height: 70px;
+                            border-radius: 50%;
+                        
+                        }
+                    }
+                    .name{
+                        font-size: 18px;
+                        font-weight: 600;
+                        text-align: center;
+                        margin:14px 0 4px 0;
+                        a{
+                            color: $color-black-70;
+                        }
+                    }
+                    .role{
+                        text-align: center;
+                        .userRoleName{
+                            display: inline-block;
+                            white-space:nowrap;
+                            vertical-align: middle;
+                            padding: 2px 4px;
+                            margin-right:5px;
+                            font-size: 13px;
+                            line-height: 16px;
+                            -webkit-border-radius: 2px;
+                            -moz-border-radius: 2px;
+                            border-radius: 2px;
+                            color:#e2b46e;
+                            background-color:#f8e7c4;
+                        }
+                        .staff{
+                            display: inline-block;
+                            white-space:nowrap;
+                            vertical-align: middle;
+                            padding: 2px 4px;
+                            font-size: 13px;
+                            line-height: 16px;
+                            -webkit-border-radius: 2px;
+                            -moz-border-radius: 2px;
+                            border-radius: 2px;
+                            color:#4CD263;
+                            background-color:#cafcc7;
+                        }
+                    }
+                    ul{
+                        width: 100%;
+                        height: auto;
+                        overflow: hidden;
+                        padding: 15px 0 18px 0;
+                        border-top: 1px solid $color-black-20;
+                        margin-top: 20px;
+                        li{
+                            float: left;
+                            width: 33%;
+                            span{
+                                display: block;
+                                text-align: center;
                                 a{
+                                    color: #333;
+                                    margin-bottom: 0px;
+                                }
+                                &:nth-child(1){
+                                    font-size: 16px;
+                                    font-weight: 600;
+                                    color: $color-black-80;
+                                }
+                                &:nth-child(2){
+                                    font-size: 12px;
                                     color: $color-black-60;
+                                    a{
+                                        color: $color-black-60;
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                .action-button {
-                    text-align: center;
-                    .action-followBox{
-                        margin-right: 10px;
+                    .action-button {
+                        text-align: center;
+                        .action-followBox{
+                            margin-right: 10px;
+                        }
                     }
                 }
             }
@@ -3910,6 +4759,18 @@
                 }
             }
         }
+        //举报标记
+        .reportMark{
+            position:relative;
+            &:before{
+                content: " ";
+                position: absolute;
+                top: 0px;
+                left: -18px;
+                bottom:0px;
+                border-left: 5px solid #f89898;
+            }
+        }
         .replyList {
             padding: 10px 0 0px;
             margin-left: 36px;
@@ -3935,17 +4796,18 @@
                 left: 60px
             }
             .box{
-                li {
-                    margin-bottom: 10px;
-                    border-bottom: 1px solid #EDEEF1;
-                    padding-bottom: 5px;
-                    margin-left: 10px;
-                    margin-right:10px;
+                .replyItem-container{
+                    position: relative;
+                    left: -30px;
+
                     &:last-child{
-                        border-bottom: 1px solid #fff;
-                        
+                        //border-bottom: 1px solid #fff;
+                        .replyItem{
+                            border-bottom: 1px solid transparent;
+                        }
                     }
-                    &:before,&:after {
+                    &:before,
+                    &:after {
                         content: "";
                         display: table;
                         font: 0/0 a
@@ -3953,117 +4815,222 @@
                     &:after {
                         clear: both;
                     }
-                    .reply-top{
-                        position:relative;
-                        font-size:0;/*父级元素设置font-size:0; 解决 display：inline-block两个元素之间的默认空格 */
-                        .avatarBox{
-                            position:absolute;
-                            border-radius:100%;
-                            left: 0px;
-                            img{
-                                border-radius:100%;
-                                width: 38px;
-                                height: 38px;
-                                margin-top: -2px;
+                    .replyItem {
+                        margin-bottom: 10px;
+                        border-bottom: 1px solid #EDEEF1;
+                        padding-bottom: 5px;
+                        margin-left: 40px;
+                        margin-right:-20px;
+                        //举报标记
+                        .reply-reportMark{
+                            position: relative;
+                            &:before{
+                                content: " ";
+                                position: absolute;
+                                top: -10px;
+                                left: -18px;
+                                bottom:-5px;
+                                border-left: 5px solid #f89898;
                             }
                         }
-                        .cancelNickname{
-                            font-weight:normal;
-                            margin-right: 3px;
-                            color: transparent;
-                            text-shadow: 0 0 5px rgba(0,0,0,0.4);
-                            zoom: 1;
-                            user-select:none;
-                            font-size: 14px;
-                            display: inline-block;
-                            margin-top:6px;
-                            margin-left: 48px;
-                        }
-                        .userName {
-                            display: inline-block;color: $color-black-60; margin-left: 48px;margin-top:6px;
-                            font-size: 14px;
-                        }
-                        .userRoleName{
-                            display: inline-block;
-                            white-space:nowrap;
-                            vertical-align: middle;
-                            padding: 2px 4px;
-                            margin-left:5px;
-                            font-size: 12px;
-                            line-height: 14px;
-                            -webkit-border-radius: 2px;
-                            -moz-border-radius: 2px;
-                            border-radius: 2px;
-                            color:#e2b46e;
-                            background-color:#f8e7c4;
-                            position: relative;
-                            top: -5px;
-                        }
-                        .staff{
-                            display: inline-block;
-                            white-space:nowrap;
-                            vertical-align: middle;
-                            padding: 2px 4px;
-                            margin-left:5px;
-                            font-size: 12px;
-                            line-height: 14px;
-                            -webkit-border-radius: 2px;
-                            -moz-border-radius: 2px;
-                            border-radius: 2px;
-                            color:#4CD263;
-                            background-color:#cafcc7;
-                            position: relative;
-                            top: -5px;
-                        }
-                        .master{
-                            display: inline-block;
-                            white-space:nowrap;
-                            vertical-align: middle;
-                            padding: 2px 4px;
-                            margin-left:5px;
-                            font-size: 12px;
-                            line-height: 14px;
-                            -webkit-border-radius: 2px;
-                            -moz-border-radius: 2px;
-                            border-radius: 2px;
-                            color:#fff;
-                            background-color:#4cc8ff;
-                            position: relative;
-                            top: -5px;
-                        }
-                        .time {
-                            float: right;
-                            color:$color-black-50;
-                            font-size: 13px;
-                            margin-top: 5px;
-                            a{
-                                margin-right: 10px;
-                                .icon{
-                                    margin-right: 2px;
+                        .reply-top{
+                            .reply-author{
+                                float: left;
+                                position:relative;
+                                font-size:0;/*父级元素设置font-size:0; 解决 display：inline-block两个元素之间的默认空格 */
+                                .avatarBox{
+                                    position:absolute;
+                                    border-radius:100%;
+                                    left: 0px;
+                                    img{
+                                        border-radius:100%;
+                                        width: 40px;
+                                        height: 40px;
+                                        margin-top: -1px;
+                                    }
+                                }
+                                .time{
+                                    margin-left: 50px;
+                                    color:$color-black-50;
+                                    font-size: 13px;
                                     position: relative;
-                                    top: 2px;
+                                    top: -7px;
+                                }
+                                .cancelNickname{
+                                    font-weight:normal;
+                                    margin-right: 3px;
+                                    color: transparent;
+                                    text-shadow: 0 0 5px rgba(0,0,0,0.4);
+                                    zoom: 1;
+                                    user-select:none;
+                                    font-size: 14px;
+                                    display: inline-block;
+                                    margin-left: 50px;
+                                }
+                                .userName {
+                                    display: inline-block;color: $color-black-60; margin-left: 50px;
+                                    font-size: 14px;
+                                }
+                                .userRoleName{
+                                    display: inline-block;
+                                    white-space:nowrap;
+                                    vertical-align: middle;
+                                    padding: 2px 4px;
+                                    margin-left:5px;
+                                    font-size: 12px;
+                                    line-height: 14px;
+                                    -webkit-border-radius: 2px;
+                                    -moz-border-radius: 2px;
+                                    border-radius: 2px;
+                                    color:#e2b46e;
+                                    background-color:#f8e7c4;
+                                    position: relative;
+                                    top: -5px;
+                                }
+                                .staff{
+                                    display: inline-block;
+                                    white-space:nowrap;
+                                    vertical-align: middle;
+                                    padding: 2px 4px;
+                                    margin-left:5px;
+                                    font-size: 12px;
+                                    line-height: 14px;
+                                    -webkit-border-radius: 2px;
+                                    -moz-border-radius: 2px;
+                                    border-radius: 2px;
+                                    color:#4CD263;
+                                    background-color:#cafcc7;
+                                    position: relative;
+                                    top: -5px;
+                                }
+                                .master{
+                                    display: inline-block;
+                                    white-space:nowrap;
+                                    vertical-align: middle;
+                                    padding: 2px 4px;
+                                    margin-left:5px;
+                                    font-size: 12px;
+                                    line-height: 14px;
+                                    -webkit-border-radius: 2px;
+                                    -moz-border-radius: 2px;
+                                    border-radius: 2px;
+                                    color:#fff;
+                                    background-color:#4cc8ff;
+                                    position: relative;
+                                    top: -5px;
                                 }
                             }
+                            .friendInfo{
+                                float: left;
+                                margin-left: 80px;
+                                position:relative;
+                                .arrow{
+                                    float: left;
+                                    color: $color-black-50;
+                                    position: relative;
+                                    top: 12px;
+                                    left: -45px;
+                                }
+                                .friendAvatarBox{
+                                position:absolute;
+                                    border-radius:100%;
+                                    left: 0px;
+                                    img{
+                                        border-radius:100%;
+                                        width: 40px;
+                                        height: 40px;
+                                        margin-top: -1px;
+                                    }
+                                }
+                                
+                                .nameInfo {
+                                    color:$color-black-60;
+                                    font-size:14px;
+                                    float: left;
+                                    margin-left: 36px;
+                                    .cancelNickname{
+                                        font-weight:normal;
+                                        margin-right: 3px;
+                                        color: transparent;
+                                        text-shadow: 0 0 5px rgba(0,0,0,0.4);
+                                        zoom: 1;
+                                        user-select:none;
+                                        font-size: 14px;
+                                        display: inline-block;
+                                        position: relative;top: 9px;
+                                    }
+                                    .userName {
+                                        display: inline-block;
+                                        color: $color-black-60; 
+                                        font-size: 14px;
+                                        position: relative;
+                                        top: 11px;
+                                        max-width: 130px;
+                                        overflow:hidden; //超出的文本隐藏
+                                        text-overflow:ellipsis; //溢出用省略号显示
+                                        white-space:nowrap; //溢出不换行
+                                    }
+                                    .master{
+                                        display: inline-block;
+                                        white-space:nowrap;
+                                        vertical-align: middle;
+                                        padding: 2px 4px;
+                                        margin-left:5px;
+                                        font-size: 12px;
+                                        line-height: 14px;
+                                        -webkit-border-radius: 2px;
+                                        -moz-border-radius: 2px;
+                                        border-radius: 2px;
+                                        color:#fff;
+                                        background-color:#4cc8ff;
+                                        position: relative;
+                                        top: 4px;
+                                    }
+                                }
+                            }
+                            .ipAddress {
+                                float: right;
+                                color:$color-black-50;
+                                .ipAddress-icon{
+                                    color: $color-black-50;
+                                }
+                                .ipAddress-text{
+                                    position: relative;
+                                    top: -2px;
+                                    margin-left: 2px;
+                                    color: $color-black-50;
+                                    font-size: 13px;
+                                }
+                                .more{
+                                    margin-left: 7px;
+                                    .icon{
+                                        position: relative;
+                                        top: 3px;
+                                        color: $color-black-50;
+                                    }
+                                }
+                            }
+                            
                         }
-                    }
-                    .replyContent{
-                        font-size: 15px;
-                        line-height:26px;
-                        color:$color-black-80;
-                        margin-top: 10px;
-                        padding-top: 8px;
-                        padding-bottom: 8px;
-                        .cancelAccount{
-                            display: inline-block;
-                            vertical-align: middle;
-                            padding: 6px 6px;
-                            font-size: 14px;
-                            line-height: 14px;
-                            -webkit-border-radius: 2px;
-                            -moz-border-radius: 2px;
-                            border-radius: 2px;
-                            color: $color-black-50;
-                            background-color:  $color-black-25;
+                        .replyContent{
+                            font-size: 15px;
+                            line-height:26px;
+                            color:$color-black-80;
+                            margin-top: 10px;
+                            padding-top: 8px;
+                            padding-bottom: 8px;
+                            .cancelAccount{
+                                display: inline-block;
+                                vertical-align: middle;
+                                padding: 6px 6px;
+                                font-size: 14px;
+                                line-height: 14px;
+                                -webkit-border-radius: 2px;
+                                -moz-border-radius: 2px;
+                                border-radius: 2px;
+                                color: $color-black-50;
+                                background-color:  $color-black-25;
+                            }
                         }
                     }
                 }
@@ -4080,6 +5047,31 @@
                     color: $color-black-50;
                     margin-left: 15px;
                     user-select:none;
+                    .icon{
+                        margin-right: 3px;
+                        position: relative;
+                        top: 3px;
+                    }
+                    &:hover {
+                        color: #1890ff;
+                    }
+                }
+                .ipAddress-text {
+                    color: $color-black-50;
+                    margin-left: 15px;
+                    margin-right: 3px;
+                    .icon{
+                        margin-right: 3px;
+                        position: relative;
+                        top: 3px;
+                    }
+                }
+                .report{
+                    color: $color-black-50;
+                    margin-left: 15px;
+                    margin-right: 3px;
+                    user-select:none;
+                    cursor:pointer;
                     .icon{
                         margin-right: 3px;
                         position: relative;
@@ -4265,6 +5257,71 @@
     
 }
 
+/* 添加举报 */
+.addReport-formModule {
+	.addReport-wrap{
+        position: relative;
+        padding:0px 10px 10px 10px;
+        .reportType-container{
+            display: flex;
+            flex-direction: column;
+            .reportType-group{
+                display: flex;
+                flex-direction: column;
+                margin-bottom: 15px;
+                .reportType-name{
+                    margin-bottom: 15px;
+                    font-size: 14px;
+                    text-align: left;
+                    color: $color-black-60;
+                }
+                .reportType-list{
+                    display: flex;
+                    flex-wrap: wrap;
+                    padding: 0;
+                    margin: 0;
+                    list-style: none;
+                    white-space: nowrap;
+                    .reportType-item{
+                        display: flex;
+                        flex-wrap: wrap;
+                        padding: 0;
+                        margin: 0;
+                        margin-right:30px;
+                        list-style: none;
+                        white-space: nowrap;
+                    }
+                }
+            }
+        }
+        :deep(.el-upload--picture-card) {
+            background-color: $color-black-10;
+            border: 1px dashed $color-black-10;
+        }
+        .submitButton{
+            width: 130px;
+        }
+    }
+    .captcha-item{
+        .captchaInput{
+            width: 130px;
+            
+        }
+       
+        :deep(.el-form-item__error){
+            width: 100%;
+        }
+        :deep(.el-image){
+            height: 100%;
+        }
+        .replaceCaptchaText{
+            position: relative;
+            top: 10px;
+            user-select:none;
+        }
+    }
+}
+
 /* 添加回复 */
 .commentReply-formModule {
 	margin-top:10px;
@@ -4280,9 +5337,7 @@
             width: 130px;
             
         }
-        :deep(.el-input__wrapper){
-            background: #fff;
-        }
+        
         :deep(.el-form-item__error){
             width: 100%;
         }
@@ -4296,6 +5351,8 @@
         }
     }
 }
+
+
 /* 修改回复 */
 .editCommentReply-formModule {
 	margin-top:30px;
@@ -4334,6 +5391,44 @@
     }
 }
 
+
+/* 添加回复对方 */
+.addCommentReplyFriend-formModule {
+	margin-top:30px;
+	margin-left: 10px;
+	margin-right:10px;
+	margin-bottom:10px;
+    .addReplyFriend-wrap{
+        position: relative;
+        .submitButton{
+            width: 130px;
+        }
+        :deep(.el-textarea__inner){
+            background-color: #fff;
+        }
+
+    }
+    .captcha-item{
+        .captchaInput{
+            width: 130px;
+            
+        }
+        :deep(.el-input__wrapper){
+            background: #fff;
+        }
+        :deep(.el-form-item__error){
+            width: 100%;
+        }
+        :deep(.el-image){
+            height: 100%;
+        }
+        .replaceCaptchaText{
+            position: relative;
+            top: 10px;
+            user-select:none;
+        }
+    }
+}
 
 /* 红包 */
 .redEnvelopeModule{

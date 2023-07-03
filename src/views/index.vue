@@ -238,6 +238,7 @@
     import * as extension from "@/utils/extension";
     import Hls from 'hls.js';
     import DPlayer from 'dplayer';
+    import { nativeQueryVideoRedirect, nativeRefreshToken } from '@/utils/http';
 
     const { proxy } = getCurrentInstance() as ComponentInternalInstance;
     const store = appStore();
@@ -830,6 +831,38 @@
                                 hls = new Hls();
                                 hls.loadSource(video.src);
                                 hls.attachMedia(video);
+                                hls.config.xhrSetup = (xhr, url) => {
+                                    
+                                    if(url.startsWith(store.state.apiUrl+"videoRedirect?")){//如果访问视频重定向页
+                                        //如果使用重定向跳转时会自动将标头Authorization发送到seaweedfs，seaweedfs会报501错误 A header you provided implies functionality that is not implemented
+                                        //这里发送X-Requested-With标头到后端，让后端返回需要跳转的地址
+                                        let videoRedirectDate = {} as any;
+                                        nativeQueryVideoRedirect(url,function(date:any){
+                                            if(store.state.systemUser != null && Object.keys(store.state.systemUser).length>0 && date.isLogin == false && date.isPermission == false){
+                                                //会话续期
+                                                nativeRefreshToken();
+                                                nativeQueryVideoRedirect(url,function(date:any){
+                                                    videoRedirectDate = date;
+                                                });
+                                            }else{
+                                                videoRedirectDate = date;
+                                            }
+                                            
+                                        });
+
+                                        if(videoRedirectDate != null && Object.keys(videoRedirectDate).length>0 && videoRedirectDate.redirect != ''){
+                                            //告诉hls重新发送ts请求
+                                            xhr.open("GET", videoRedirectDate.redirect, true);//用重定向后的地址请求
+                                            //xhr.setRequestHeader("X-Requested-With", 'XMLHttpRequest');
+                                        }
+                                    }else{
+                                        // 请求ts的url 添加参数 props.fileid
+                                        //url = url + "?t=" + props.fileid;
+                                        // 这一步必须 告诉hls重新发送ts请求
+                                        xhr.open("GET", url, true);
+                                        //xhr.setRequestHeader("X-Requested-With", 'XMLHttpRequest');
+                                    }
+                                };
                             },
                         },
                     }
@@ -949,7 +982,7 @@
     });
 
     onMounted(() => {
-        let page:number = router.currentRoute.value.query.page != undefined ? parseInt(router.currentRoute.value.query.page as string) :1;
+        let page:number = (router.currentRoute.value.query.page != undefined && router.currentRoute.value.query.page != '') ? parseInt(router.currentRoute.value.query.page as string) :1;
 
         let tagId:string = router.currentRoute.value.query.tagId != undefined ?router.currentRoute.value.query.tagId as string :'';
         
