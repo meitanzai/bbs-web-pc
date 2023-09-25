@@ -12,11 +12,13 @@ import 'element-plus/theme-chalk/el-message.css'//全局 Message 消息提示(js
 import "element-plus/theme-chalk/el-message-box.css";// messageBox的样式
 import "element-plus/theme-chalk/el-overlay.css";// 遮罩层样式
 import "element-plus/theme-chalk/el-loading.css";// loading的样式
+import "element-plus/theme-chalk/el-notification.css";//Notification的样式
 
 //import 'element-plus/dist/index.css'//全部引入
 import 'element-plus/es/components/form/style/css'//script setup中使用组件时不支持自动导入的样式
 import 'element-plus/theme-chalk/el-affix.css'//全局 固钉
 
+import 'bytemd/dist/index.css'//Markdown编辑器样式
 
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
@@ -28,7 +30,6 @@ import '@/assets/css/base.css'
 import { statistic } from '@/utils/trackPageview';
 import { queryBaseInfo } from '@/utils/requestAPI';
 //import '@/assets/css/module.less'
-
 
 
 
@@ -59,6 +60,7 @@ app.use(createMetaManager(false, {
 
 app.component('Icon', Icon)//富文本渲染展示需要全局注册
 app.component('el-image', ElImage);//富文本渲染展示需要全局注册
+
 
 //ElementPlus图标
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {

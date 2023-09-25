@@ -1566,6 +1566,7 @@
                             line-height:40px;
                             font-size: 16px;
                             text-align: center;
+                            font-weight: normal;
                         }
                         .badge{
                             :deep(.el-badge__content.is-fixed){

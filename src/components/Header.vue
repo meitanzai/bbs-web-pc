@@ -99,7 +99,7 @@
         </el-collapse-transition>
 
         <!--登录弹出窗口-->
-        <el-dialog v-model="loginVisible" width="450px" draggable :close-on-click-modal="false" modal-class="dialog-overlay" custom-class="login-popup">
+        <el-dialog v-model="loginVisible" width="450px" draggable :close-on-click-modal="false" modal-class="dialog-overlay" class="login-popup">
             <!-- 登录 -->
             <Login  @closeDialog="receive_closeDialog"  :pop_up_window="true"/>
         </el-dialog>
@@ -135,10 +135,18 @@
     const updateAvatarVisible = ref(false)
 
     //传递消息给父组件
-    const emit = defineEmits(['unreadMessage','updateAvatar'])
+    const emit = defineEmits(['unreadMessage','updateAvatar','sticky','floatWindow'])
     //页头动画
     const headerTransition = ref(true)
 
+
+    //接收父组件消息
+    const props = defineProps({
+        sticky: {//是否使用浮动置顶
+            type: Boolean,
+            default: true
+        }
+    })  
    
     const state = reactive({
         columnList: [] as Column[],//栏目集合
@@ -176,22 +184,30 @@
         for (let i: number = 0; i < rootElement.children.length; i++) {
             let node:Element = rootElement.children[i];
             
+            if(!props.sticky){
+                node.setAttribute("class","");//关闭浮动置顶功能
+                return;
+            }
+
+
             if(node.getAttribute("class")?.indexOf("el-affix--fixed") == 0){
                 if(oldPosition < value.scrollTop && value.fixed && value.scrollTop >200){//如果向下滚动并且在浮动状态并且滚动200像素
                 //if(oldPosition < value.scrollTop && value.fixed){//如果向下滚动并且在浮动状态
                     node.setAttribute("class","el-affix--fixed custom-el-affix--fixed--no");
                     headerTransition.value = false;//隐藏
-                    
+                    //传递消息给父组件
+                    emit('floatWindow',false);//浮动窗口
   
                 }else{//显示
                     node.setAttribute("class","el-affix--fixed");
                     headerTransition.value = true;//显示
-                    
+                    emit('floatWindow',true);//浮动窗口
                 }
                 
             }
             if(value.scrollTop == 0){
                 headerTransition.value = true;//显示
+                emit('floatWindow',true);//浮动窗口
                 headerAffix.value?.update();
             }
             

@@ -70,10 +70,10 @@ const axiosInstance = axios.create({
     // 定义请求超时时间
     timeout: 20000,
     // 请求带上 cookie
-    withCredentials: true,
+    //withCredentials: true,
     // 定义消息头
     headers: {
-        'X-Requested-With': 'XMLHttpRequest',
+     //   'X-Requested-With': 'XMLHttpRequest',
         post: {
             'Content-Type': 'application/x-www-form-urlencoded'
         }
@@ -85,9 +85,14 @@ const axiosInstance = axios.create({
 export default axiosInstance
 
 //请求拦截器
-axiosInstance.interceptors.request.use((config: AxiosRequestConfig) => {
+axiosInstance.interceptors.request.use((config: any) => {
     if (config.headers === undefined) {
         config.headers = {};
+    }
+
+    //上传到第三方文件存储系统时可能只允许提交CORS默认响应头
+    if(config.isCorsDefaultHeaders == undefined || config.isCorsDefaultHeaders == false){
+        config.headers['X-Requested-With'] = 'XMLHttpRequest';
     }
 
 
@@ -108,7 +113,7 @@ axiosInstance.interceptors.request.use((config: AxiosRequestConfig) => {
 
     //从localStorage中获取登录令牌
     let bbsToken = window.localStorage.getItem('bbsToken');
-    if(bbsToken != null){
+    if(bbsToken != null && (config.isCorsDefaultHeaders == undefined || config.isCorsDefaultHeaders == false)){
         let tokenObject = JSON.parse(bbsToken);
         //让每个请求携带会话token  ['Authorization']
         config.headers['Authorization'] = 'Bearer '+tokenObject.accessToken+","+tokenObject.refreshToken;//如果将过期的access_token提交到后端让令牌提取器解析，会返回401错误。注意:不需要登录后才能查看的页面不要携带本参数，如登录页和刷新令牌页不要提交此参数，目前无需登录的页面携带了本参数的请求由后端过滤去掉

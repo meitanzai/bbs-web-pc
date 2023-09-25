@@ -515,7 +515,8 @@
             width: 100px;
             margin: -11px auto 0;
             background: #fff;
-            text-align: center
+            text-align: center;
+            font-weight:normal;
         }
         .link{
             text-align: center;

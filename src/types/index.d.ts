@@ -162,6 +162,8 @@ export interface Topic {
     lastUpdateTime: string;//最后修改时间
     imageInfoList: Array<ImageInfo>;//图片信息集合
     mediaInfoList: Array<MediaInfo>;//媒体文件信息集合
+    isMarkdown: boolean|null;//是否使用Markdown
+    markdownContent: string;//Markdown内容
     commentTotal: string;//评论总数
     allow: boolean;//允许评论
     viewTotal: string;//查看总数
@@ -275,6 +277,8 @@ export interface Comment {
     status: number;//状态 10.待审核 20.已发布 110.待审核用户删除 120.已发布用户删除 100010.待审核员工删除 100020.已发布员工删除
     quoteList: Array<Quote>;//引用集合
     content: string;//评论内容
+    isMarkdown: boolean|null;//是否使用Markdown
+    markdownContent: string;//Markdown内容
     postTime: string;//评论时间
     lastUpdateTime: string;//最后修改时间
     userRoleNameList: Array<string>;//用户角色名称集合
@@ -347,6 +351,8 @@ export interface Question {
     title: string;//标题
     questionTagAssociationList: Array<QuestionTagAssociation>;//标签
     content: string;//问题内容
+    isMarkdown: boolean|null;//是否使用Markdown
+    markdownContent: string;//Markdown内容
     summary: string;//内容摘要
     appendQuestionItemList: Array<AppendQuestionItem>;//追加内容集合
     postTime: string;//发表时间
@@ -383,6 +389,8 @@ export interface QuestionTagAssociation {
 export interface AppendQuestionItem {
     id: string;//Id
     content: string;//追加内容
+    isMarkdown: boolean|null;//是否使用Markdown
+    markdownContent: string;//Markdown内容
     postTime: string;//追加时间
 }
 
@@ -400,6 +408,8 @@ export interface Answer {
     questionTitle: string;//问题标题
     status: number;//状态 10.待审核 20.已发布 110.待审核用户删除 120.已发布用户删除 100010.待审核员工删除 100020.已发布员工删除
     adoption:boolean;//答案是否采纳
+    isMarkdown: boolean|null;//是否使用Markdown
+    markdownContent: string;//Markdown内容
     content: string;//答案内容
     postTime: string;//回答时间
     lastUpdateTime: string;//最后修改时间
@@ -507,6 +517,8 @@ export interface Help {
     helpTypeName: string;//帮助分类名称
 	name: string;//帮助名称
     content: string;//帮助内容
+    isMarkdown: boolean|null;//是否使用Markdown
+    markdownContent: string;//Markdown内容
     times: string;//发表时间
     visible: boolean;//是否可见
 }

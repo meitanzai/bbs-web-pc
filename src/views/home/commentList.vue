@@ -14,7 +14,8 @@
                         </template>
                         <template #default="scope">
                             <div v-if="scope.row.status == 10">{{scope.row.content}}</div>
-                            <router-link tag="div" class="link" v-if="scope.row.status == 20" :to="{path: '/thread', query:{ topicId : scope.row.topicId,commentId:scope.row.id}}">
+                            <!--reportModule为前端借用‘举报’功能标记模块提示项的参数   10:话题  20:评论  30:评论回复  40:问题  50:答案   60:答案回复-->
+                            <router-link tag="div" class="link" v-if="scope.row.status == 20" :to="{path: '/thread', query:{ topicId : scope.row.topicId,commentId:scope.row.id,reportModule:20}}">
                                 {{scope.row.content}}
                             </router-link>
                         </template>

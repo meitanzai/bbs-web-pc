@@ -26,6 +26,7 @@
             display: inline-block;
             color: $color-black-60;
             margin-top: 10px; 
+            font-style:normal;
         }
         a:hover {
             color:#1890ff; text-decoration:none;
@@ -35,7 +36,7 @@
         width: 990px; margin: 0 auto;  color: $color-black-60; text-align: center; 
         margin-top: 18px; 
         font-size: 14px;
-        em { font-family: Tahoma; margin-left: 3px; }
+        em { font-family: Tahoma; margin-left: 3px; font-style:normal;}
         a { font-family: Tahoma; margin-left: 19px; color: $color-black-60; }
         a:hover { text-decoration:none;color:#1890ff;}
         span { margin-left: 17px; }

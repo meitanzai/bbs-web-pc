@@ -15,8 +15,9 @@ import "../../public/common/default/pc/js/kindeditor/kindeditor-min.js";// 富�
  * @param uploadPath 上传文件路径  例如control/topic/manage?method=upload
  * @param userGradeList 会员等级
  * @param fileStorageSystem 使用的文件存储系统
+ * @param callback 回调
  */
- export function createEditor(ref:any, availableTag:Array<string>, uploadPath:string, userGradeList:Array<UserGrade> | null,fileStorageSystem:number) {
+ export function createEditor(ref:any, availableTag:Array<string>, uploadPath:string, userGradeList:Array<UserGrade> | null,fileStorageSystem:number,callback:(id: string) => void) {
 	let baseURL = store.state.apiUrl;//后端地址
 
 	if(baseURL == null || baseURL == ''){
@@ -112,7 +113,10 @@ import "../../public/common/default/pc/js/kindeditor/kindeditor-min.js";// 富�
 		},
 		afterBlur:function(){
            this.sync();
-		}
+		},
+		afterToggleEditor:function(){
+			callback(ref.getAttribute('editorId'));
+		},
 
 	});
     //自动展开内容

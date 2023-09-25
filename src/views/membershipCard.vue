@@ -345,6 +345,7 @@
             color: $color-black-90;
             font-size: 20px;
             line-height: 28px;
+            font-weight:normal;
         }
         .extra {
             float: right;

@@ -44,17 +44,20 @@
                                 <div class="comment-icon"><Icon name="commentCount" size="16px"/></div>
                                 <div class="comment">{{state.topic.commentTotal}}个评论</div>
                             </div>
-                            <div class="topicContent" :class="router.currentRoute.value.query.reportModule !=undefined && parseInt(router.currentRoute.value.query.reportModule as string) == 10 ? 'reportMark' : ''">
+                                 
+                            <div :class="[state.topic.isMarkdown != null && state.topic.isMarkdown == true ? 'markdown-body-custom topicMarkdownContent' : 'topicContent', router.currentRoute.value.query.reportModule !=undefined && parseInt(router.currentRoute.value.query.reportModule as string) == 10 ? 'reportMark' : '']">
+                               
                                 <div class="lastUpdateTime" v-if="state.topic.lastUpdateTime != null">最后修改时间：{{state.topic.lastUpdateTime}}</div>
                                
 
                                 <div class="cancelAccount" v-if="state.topic.account == null || state.topic.account == ''">此用户账号已注销</div>
-                                
-                                <div :ref="'topic_'+state.topic.id">
-                                    <RenderTemplate @click-onTopicUnhide="onTopicUnhide" :html="state.topic.content"></RenderTemplate>
-                                    
+                                  
+                                <div :ref="el => {if(el) topicRefs['topic_'+state.topic.id] = el}">
+                                   <RenderTemplate @click-onTopicUnhide="onTopicUnhide" @click-onDownload="onDownload" :html="state.topic.content"></RenderTemplate>
                                 </div>
                             </div>
+
+
                             <div class="favorite-formModule" v-if="state.topic.userName != null && state.topic.userName != ''">
                                 <!--加入收藏夹-->
                                 <span class="numberButton" @click="addFavorite(state.topic.id)">
@@ -108,7 +111,7 @@
                                     
                                 </div>
                                 
-                                <div class="commentContent">
+                                <div :class="[comment.isMarkdown != null && comment.isMarkdown == true ? 'markdown-body-custom commentMarkdownContent' : 'commentContent']">
                                     <div class="cancelAccount" v-if="comment.account == null || comment.account == ''">此用户账号已注销</div>
                                    
 
@@ -156,7 +159,7 @@
                                                             <span class="arrow"><icon name="caret-right" size="14px"/></span>
                                                             <router-link tag="a" v-if="reply.friendUserName!= null && reply.friendUserName != ''" class="friendAvatarBox" :to="{path:'/user/control/home',query: {userName: reply.friendUserName}}">
                                                                 <img v-if="reply.friendAvatarName != null" :src="reply.friendAvatarPath+'100x100/'+reply.friendAvatarName" class="img">
-                                                                <img v-if="reply.friendAvatarName == null" :src="reply.friendAvatar" width="40" height="40" class="img"/>
+                                                                <img v-if="reply.friendAvatarName == null" :src="reply.friendAvatar" width="20" height="20" class="img"/>
                                                                 
                                                             </router-link>
                                                             
@@ -308,7 +311,14 @@
                                         <div class="head"><Icon name="quote-left-solid" size="52px" class="icon"/></div>
                                         <el-form label-position="right" size="large" :model="state" class="iconForm-container" @submit.native.prevent>
                                             <el-form-item :error="error.content.get('addQuoteComment-'+comment.id)">
-                                                <textarea :ref="handleQuoteNodes" :commentId="comment.id" style="width:100%;height:230px;visibility:hidden;"></textarea>
+                                                
+                                                
+                                                <div v-show="!state.isQuoteCommentMarkdownMap.get(comment.id)" style="width: 100%;">
+                                                    <textarea :ref="handleQuoteNodes" :editorId="'quoteComment_'+comment.id" :commentId="comment.id" style="width:100%;height:230px;visibility:hidden;"></textarea>
+                                                </div>
+                                                <div v-if="state.isQuoteCommentMarkdownMap.get(comment.id)" style="width: 100%;">
+                                                    <Editor mode="split" :editorId="'quoteComment_'+comment.id" :value="(state.quoteCommentMarkdownContent[comment.id] as string)" :plugins="state.quoteCommentEditorPlugin" :locale="zhHans" :sanitize="commentSanitize" placeholder="请输入内容..." @change="handleQuoteCommentMarkdownChange($event,comment.id)"/>
+                                                </div>
                                             </el-form-item>
                                             <el-form-item :error="error.captchaValue.get('addQuoteComment-'+comment.id)" v-if="state.showCaptcha.get('addQuoteComment-'+comment.id)" class="captcha-item">
                                                 <el-row>
@@ -342,7 +352,12 @@
                                         <div class="head"><Icon name="pencil-alt" size="50px" class="icon"/></div>
                                         <el-form label-position="right" :ref="'formEditCommentRef-'+comment.id" size="large" :model="state" class="iconForm-container" @submit.native.prevent>
                                             <el-form-item :error="error.content.get('editComment-'+comment.id)">
-                                                <textarea :ref="handleEditCommentNodes" :commentId="comment.id" style="width:100%;height:230px;visibility:hidden;"></textarea>
+                                                <div v-show="!state.isEditCommentMarkdownMap.get(comment.id)" style="width: 100%;">
+                                                    <textarea :ref="handleEditCommentNodes" :editorId="'editComment_'+comment.id" :commentId="comment.id" style="width:100%;height:230px;visibility:hidden;"></textarea>
+                                                </div>
+                                                <div v-if="state.isEditCommentMarkdownMap.get(comment.id)" style="width: 100%;">
+                                                    <Editor mode="split" :editorId="'editComment_'+comment.id" :value="(state.editCommentMarkdownContent[comment.id] as string)" :plugins="state.editCommentEditorPlugin" :locale="zhHans" :sanitize="commentSanitize" placeholder="请输入内容..." @change="handleEditCommentMarkdownChange($event,comment.id)"/>
+                                                </div>
                                             </el-form-item>
                                             <el-form-item :error="error.captchaValue.get('editComment-'+comment.id)" v-if="state.showCaptcha.get('editComment-'+comment.id)" class="captcha-item">
                                                 <el-row>
@@ -412,9 +427,16 @@
                                 <div class="addComment-wrap">
                                     <el-form label-position="right" :ref="'formAddCommentRef'" size="large" :model="state" class="iconForm-container" @submit.native.prevent>
                                         <el-form-item :error="error.content.get('addComment-'+state.topicId)">
-                                            <textarea ref="formAddCommentContentRef" style="width:100%;height:230px;visibility:hidden;"></textarea>
+                                            <div v-show="!state.isAddCommentMarkdown" style="width: 100%;">
+                                                <textarea :editorId="'addComment'" ref="formAddCommentContentRef" style="width:100%;height:230px;visibility:hidden;"></textarea>
+                                            </div>
+                                            <div v-if="state.isAddCommentMarkdown" style="width: 100%;">
+                                                
+                                                <Editor :editorId="'addComment'" :value="state.addCommentMarkdownContent" :plugins="state.addCommentEditorPlugin" :locale="zhHans" :sanitize="commentSanitize" placeholder="请输入内容..." @change="handleAddCommentMarkdownChange"/>
+                                           
+                                            </div>
                                         </el-form-item>
-                                        
+
                                         <el-form-item :error="error.captchaValue.get('addComment-'+state.topicId)" v-if="state.showCaptcha.get('addComment-'+state.topicId)" class="captcha-item">
                                             <el-row>
                                                 <el-col :span="10" >
@@ -711,7 +733,7 @@
 </template>
 
 <script lang="ts" setup>
-    import { onMounted, ref ,nextTick, getCurrentInstance, ComponentInternalInstance, reactive, onUnmounted, computed,onUpdated, watch, watchEffect,} from 'vue'
+    import { onMounted, ref ,nextTick, getCurrentInstance, ComponentInternalInstance, reactive, onUnmounted, computed,onUpdated, watch, watchEffect, onBeforeUpdate,} from 'vue'
     import { ElImage, ElMessage, ElMessageBox, UploadFile, UploadProps, UploadRawFile, UploadUserFile} from 'element-plus'
     import { appStore } from "@/store";
     import { useActiveMeta, useMeta} from 'vue-meta'
@@ -723,11 +745,29 @@
     import Long from "long";
     import Hls from 'hls.js';
     import DPlayer from 'dplayer';
-    import { escapeHtml, escapeVueHtml } from '@/utils/escape';
+    import { escapeHtml, escapeVueHtml, unescapeHtml } from '@/utils/escape';
     import { getAllUrlParam, getLanguageClassName, processErrorInfo } from '@/utils/tool';
     import { createEditor } from '@/utils/editor';
     import Prism from "prismjs";
-    import { nativeQueryVideoRedirect, nativeRefreshToken } from '@/utils/http';
+    import {nativeQueryVideoRedirect, nativeRefreshToken } from '@/utils/http';
+    import mermaid from "mermaid";
+    import katex from 'katex'
+    import 'katex/dist/katex.css'   
+    import zhHans from 'bytemd/locales/zh_Hans.json'
+    import { markdownPlugins,sanitize } from '@/utils/markdownEditor';
+  
+    import { toggleEditor } from '@/utils/markdownPlugin/plugin-toggle-editor';
+    import { help } from '@/utils/markdownPlugin/plugin-help';
+    import { emoji } from '@/utils/markdownPlugin/plugin-emoji';
+    import { imageUpload } from '@/utils/markdownPlugin/plugin-image-upload';
+    import { pasteImageUpload } from '@/utils/markdownPlugin/plugin-paste-image';
+    import { Editor } from '@bytemd/vue-next'
+    import type { BytemdPlugin } from 'bytemd'
+    import config from '@/utils/markdownPlugin/plugin-config';
+
+
+
+    mermaid.mermaidAPI.initialize({ startOnLoad: false });
 
     const { proxy } = getCurrentInstance() as ComponentInternalInstance;
     const store = appStore();
@@ -736,6 +776,10 @@
     //const formAddCommentRef = ref<FormInstance>();
     const formAddCommentContentRef = ref()
     const right_ref = ref()
+
+    //话题内容
+    const topicRefs = ref({}) as any;
+   
     
     //html页元信息
     const computedMeta = computed(() => ({ 
@@ -794,22 +838,37 @@
         
 
         allowComment:false,//是否显示评论表单
-        availableTag:[],//评论编辑器允许使用标签
+        availableTag:[] as Array<string>,//评论编辑器允许使用标签
         fileSystem:0,//文件存储系统
+        supportEditor:10,//支持编辑器
+        addCommentMarkdownContent:'',//markdown评论内容
+        isAddCommentMarkdown:false,//是否使用markdown评论编辑器
+
+
+
 
         addCommentEditor :{} as any,//添加评论编辑器
-        addCommentEditorCreateParameObject :{},//添加评论编辑器的创建参数
+        addCommentEditorCreateParameObject :{} as any,//添加评论编辑器的创建参数
         
         
         quoteFormView : new Map(),//评论引用表单  key:评论Id value:是否显示
         quoteEditorMap:new Map(),//引用评论富文本编辑器集合 key:评论Id value:富文本编辑器
         quoteEditorCreateParameMap:new Map(),//引用评论编辑器的创建参数 key:评论Id value:编辑器参数对象
         quoteData : new Map(),//引用数据 map格式 key:评论Id value:引用html数据
+
         
+        isQuoteCommentMarkdownMap: new Map(),//引用评论是否使用markdown编辑器  key:评论Id value:是否为markdown编辑器
+        quoteCommentMarkdownContent : {} as any,//引用评论markdown编辑内容 key:评论Id value:评论内容
+        
+
+
         editCommentFormView : new Map(),//修改评论表单  key:评论Id value:是否显示
         editCommentEditorMap:new Map(),//修改评论富文本编辑器集合 key:评论Id value:富文本编辑器
         editCommentEditorCreateParameMap:new Map(),//修改评论编辑器的创建参数 key:评论Id value:编辑器参数对象
        
+
+        isEditCommentMarkdownMap: new Map(),//修改评论是否使用markdown编辑器  key:评论Id value:是否为markdown编辑器
+        editCommentMarkdownContent : {} as any,//修改评论markdown编辑内容 key:评论Id value:评论内容
 
         isPageCall :false,//是否由分页按钮调用
 
@@ -862,6 +921,11 @@
         dot : new Map(),//楼中楼的点  key:回复Id value:是否显示
         
         affix_offset:10,//固钉偏移距离
+
+
+        addCommentEditorPlugin:[] as BytemdPlugin[],//添加评论Markdown编辑器插件
+        quoteCommentEditorPlugin:[] as BytemdPlugin[],//引用评论Markdown编辑器插件
+        editCommentEditorPlugin:[] as BytemdPlugin[],//修改评论Markdown编辑器插件
     });
 
      //错误
@@ -895,6 +959,104 @@
             state.replyElementNodes.push(el);
         }
 	}
+
+
+
+    //处理添加评论Markdown
+    const handleAddCommentMarkdownChange = (value: string) => {
+        state.addCommentMarkdownContent = value;
+    }
+
+    //评论白名单
+    const commentSanitize = (schema: any) => {
+        schema = sanitize(schema);
+        return schema;
+    }
+
+
+     //处理切换到富文本编辑器
+     const handleAddCommentToggleRichtextEditor = (editorId: string) => {
+        state.isAddCommentMarkdown = false;
+        nextTick(()=>{
+            if (Object.keys(state.addCommentEditorCreateParameObject).length != 0) {//不等于空
+                //创建富文本编辑器
+                state.addCommentEditor = createEditor(
+                    state.addCommentEditorCreateParameObject.ref, 
+                    state.addCommentEditorCreateParameObject.availableTag, 
+                    state.addCommentEditorCreateParameObject.uploadPath, 
+                    state.addCommentEditorCreateParameObject.userGradeList,
+                    state.fileSystem,
+                    ()=>{
+                        handleAddCommentToggleMarkdownEditor(editorId);
+                    }
+                );
+            }
+        })
+    }
+
+    //处理添加评论切换到Markdown编辑器
+    const handleAddCommentToggleMarkdownEditor = (editorId: string) => {
+        if (Object.keys(state.addCommentEditor).length != 0) {//不等于空
+            state.addCommentEditor.remove();
+            state.addCommentEditor = {};
+        }
+        state.isAddCommentMarkdown = true;
+    }
+
+
+    //处理引用评论Markdown
+    const handleQuoteCommentMarkdownChange = (value: string, commentId: string) => {
+       Object.assign(state.quoteCommentMarkdownContent, {[commentId] : value});
+    }
+
+
+    //处理引用评论切换到富文本编辑器
+    const handleQuoteCommentToggleRichtextEditor = (editorId: string) => {
+        let commentId = editorId.split("_")[1];
+        state.isQuoteCommentMarkdownMap.set(commentId,false);
+
+        nextTick(()=>{
+            
+            let quoteEditorCreateParameObject = state.quoteEditorCreateParameMap.get(commentId);
+          
+            if (quoteEditorCreateParameObject !=undefined && Object.keys(quoteEditorCreateParameObject).length != 0) {//不等于空
+                
+                //创建富文本编辑器
+                let quoteCommentEditor = createEditor(
+                    quoteEditorCreateParameObject.ref, 
+                    quoteEditorCreateParameObject.availableTag, 
+                    quoteEditorCreateParameObject.uploadPath, 
+                    quoteEditorCreateParameObject.userGradeList,
+                    state.fileSystem,
+                    ()=>{
+                        handleQuoteCommentToggleMarkdownEditor(editorId);
+                    }
+                );
+                state.quoteEditorMap.set(commentId, quoteCommentEditor);
+            }
+        })
+    }
+
+    //处理引用评论切换到Markdown编辑器
+    const handleQuoteCommentToggleMarkdownEditor = (editorId: string) => {
+        let commentId = editorId.split("_")[1];
+
+        let quoteEditor = state.quoteEditorMap.get(commentId);
+        if (quoteEditor !=undefined && Object.keys(quoteEditor).length != 0) {//不等于空
+            quoteEditor.remove();
+            quoteEditor = {};
+        }
+
+        state.isQuoteCommentMarkdownMap.set(commentId,true);                
+    }
+
+
+    //处理修改评论Markdown
+    const handleEditCommentMarkdownChange = (value: string, commentId: string) => {
+       Object.assign(state.editCommentMarkdownContent, {[commentId] : value});
+    }
+
+
 
 
     //话题解锁
@@ -984,7 +1146,7 @@
                 let contentNode = document.createElement("div");
                 contentNode.innerHTML = data.content;
                 bindNode(contentNode);
-                
+               
                 data.content = escapeVueHtml(contentNode.innerHTML);
 
                 
@@ -1001,15 +1163,14 @@
                     setTimeout(function() {
                         renderVideoPlayer();//渲染视频播放器
                     }, 30);
-
+                    
                     //渲染代码
-                    let topicRefValue = proxy?.$refs['topic_'+state.topicId];
+                    let topicRefValue = topicRefs.value['topic_'+state.topicId]
                     if(topicRefValue != undefined){
                         renderBindNode(topicRefValue); 
                     }
                 });
 
-                
 
                 //回调
                 callback();
@@ -1101,7 +1262,7 @@
                                     }		
                                     if(quote.avatarName == undefined || quote.avatarName == null || quote.avatarName == ''){
                                         let char = (quote.nickname != null && quote.nickname != '') ? quote.nickname : quote.account;
-                                        let width = 22;//头像宽
+                                        let width = 30;//头像宽
                                         avatarHtml += "<img src=\""+letterAvatar(char, width)+"\">";
                                         
                                     }
@@ -1115,7 +1276,7 @@
                                     }		
                                     if(quote.avatarName == undefined || quote.avatarName == null || quote.avatarName == ''){
                                         let char = (quote.nickname != null && quote.nickname != '') ? quote.nickname : quote.account;
-                                        let width = 22;//头像宽
+                                        let width = 30;//头像宽
                                         avatarHtml += "<img src=\""+letterAvatar(char, width)+"\">";
                                         
                                     }
@@ -1189,10 +1350,10 @@
 
                 nextTick(()=> {
                     //跳转到锚点
+                   // window.scrollTo(0,0);
 
                     //跳转到评论
                     if(commentId != null && commentId != '' && (replyId == null || replyId == '')){
-
                         let commentRef = (proxy?.$refs['comment_'+commentId] as any);
                         if(commentRef !=undefined){
                             let commentRefValue = commentRef[0];
@@ -1393,6 +1554,31 @@
         }
         
     }
+
+    //文件下载
+    const onDownload = (href: string) => {
+        let regx = new RegExp("^"+store.state.apiUrl,"i");//忽略大小写
+        let path = href.replace(regx,"")
+
+        proxy?.$axios({
+            url: '/'+path,
+            method: 'get',
+            params:  {
+            },
+            showLoading: false,//是否显示加载图标
+            loadingMask:false,// 是否显示遮罩层
+        })
+        .then((response: AxiosResponse) => {
+            if(response){
+                const result: any = response.data;
+                if(JSON.parse(result.success)){
+                    location.href = result.redirect;
+                }
+            }
+        }).catch((error: any) =>{
+            console.log(error);
+        });
+    }
 	
     //递归绑定节点参数
     const bindNode = (node:any) => {
@@ -1473,13 +1659,12 @@
                     }else{
                     
                         html = '<el-image src="'+src+'" '+style+' :preview-src-list=["'+src+'"] lazy hide-on-click-modal ></el-image>';
+                    
                     }
                     //创建要替换的元素
                 //	let html = '<el-image src="'+src+'" '+style+' lazy></el-image>';
                 //	let html = '<el-image src="'+src+'" '+style+' :preview-src-list=["http://127.0.0.1:8080/cms/common/tttttt/templates.jpg"] lazy hide-on-click-modal ></el-image>';
-                    
-                
-                
+               
                 //	let html = '<el-image src="backstage/images/null.gif" lazy></el-image>';
                     let placeholder = document.createElement('div');
                     placeholder.innerHTML = html;
@@ -1504,53 +1689,137 @@
                     state.playerIdList.push(id);	
                 }
 
-                
+                //处理下载
+                if(childNode.nodeName.toLowerCase() == "a" ){
+                    let href = childNode.getAttribute("href")
+                    let title = childNode.getAttribute("title")
+                    let linkType = childNode.getAttribute("linkType")
+                    let startUrl = store.state.apiUrl+"fileDowload?jump=";
+                    if(linkType == "download" && href != ""){
+                        let downloadHtml = "";
+                        if(href.toLowerCase().startsWith(startUrl.toLowerCase())){
+                            downloadHtml ='<span class="download" @click="onDownload_renderTemplate(`'+href+'`);"><Icon name="download-2-line" size="20px" class="link-icon"></Icon>'+escapeHtml(title)+'</span>';
+                        }else{
+                            downloadHtml ='<a class="download" href="'+href+'"><Icon name="download-2-line" size="20px" class="link-icon"></Icon>'+escapeHtml(title)+'</a>';
+                        }
+                        let downloadDom = document.createElement('div');
+                        downloadDom.innerHTML=downloadHtml;
+
+                        childNode.replaceWith(downloadDom.firstElementChild);
+                    }
+                }
+
                 //处理代码标签
                 if(childNode.nodeName.toLowerCase() == "pre" ){
-                    let pre_html = childNode.innerHTML;
-                    let class_val = childNode.className;
-                    let lan_class = "";
+
                     
-                    let class_arr = new Array();
-                    class_arr = class_val.split(' ');
+                    let firstChildNode = null;//第一个子节点
+
+                    for(let p = 0;p < childNode.childNodes.length;p++){
+                        let preChildNode = childNode.childNodes[p];
+                        if(preChildNode.nodeName.toLowerCase() == "code" ){
+                            firstChildNode = preChildNode;
+                            break;
+                        }
+                    }
                     
-                    for(let k=0; k<class_arr.length; k++){
-                        let className = class_arr[k].trim();
+                    if(firstChildNode != null && firstChildNode.getAttribute("class")!= null && firstChildNode.getAttribute("class").indexOf("language-") != -1){//Markdown代码
                         
-                        if(className != null && className != ""){
-                            if (className.lastIndexOf('lang-', 0) === 0) {
-                                lan_class = className;
-                                break;
+                        let class_val = firstChildNode.className;
+                        let lan_class = "";
+                        let class_arr = new Array();
+                        class_arr = class_val.split(' ');
+                        
+                        for(let k=0; k<class_arr.length; k++){
+                            let className = class_arr[k].trim();
+                            
+                            if(className != null && className != ""){
+                                if (className.lastIndexOf('language-', 0) === 0) {
+                                    lan_class = className;
+                                    break;
+                                }
                             }
                         }
+                        if(firstChildNode.getAttribute("class").indexOf("language-mermaid") == -1){
+                            childNode.className = "line-numbers "+lan_class;
+                            childNode.setAttribute("data-prismjs-copy","复制");
+                            childNode.setAttribute("data-prismjs-copy-error","按Ctrl+C复制");
+                            childNode.setAttribute("data-prismjs-copy-success","复制成功");
+
+
+                            let nodeHtml = "";
+
+                            //删除code节点
+                            let preChildNodeList = childNode.childNodes;
+                            for(let p = 0;p < preChildNodeList.length;p++){
+                                let preChildNode = preChildNodeList[p];
+                                if(preChildNode.nodeName.toLowerCase() == "code" ){
+                                    nodeHtml += preChildNode.innerHTML;
+                                    preChildNode.parentNode.removeChild(preChildNode);
+                                }
+                                
+                            }
+                            
+                            let dom = document.createElement('code');
+                            dom.className = "line-numbers "+lan_class;
+                            dom.innerHTML=nodeHtml;
+                            
+                        
+                            childNode.appendChild(dom);
+                        }
                     }
-                    
-                    childNode.className = "line-numbers "+getLanguageClassName(lan_class);
-                    childNode.setAttribute("data-prismjs-copy","复制");
-                    childNode.setAttribute("data-prismjs-copy-error","按Ctrl+C复制");
-                    childNode.setAttribute("data-prismjs-copy-success","复制成功");
 
 
-                    let nodeHtml = "";
-
-                    //删除code节点
-                    let preChildNodeList = childNode.childNodes;
-                    for(let p = 0;p < preChildNodeList.length;p++){
-                        let preChildNode = preChildNodeList[p];
-                        if(preChildNode.nodeName.toLowerCase() == "code" ){
-                            nodeHtml += preChildNode.innerHTML;
-                            preChildNode.parentNode.removeChild(preChildNode);
+                    if(childNode.className != null && childNode.className.indexOf("lang-") != -1){//富文本编辑器代码
+                       
+                        let pre_html = childNode.innerHTML;
+                        let class_val = childNode.className;
+                        let lan_class = "";
+                        
+                        let class_arr = new Array();
+                        class_arr = class_val.split(' ');
+                        
+                        for(let k=0; k<class_arr.length; k++){
+                            let className = class_arr[k].trim();
+                            
+                            if(className != null && className != ""){
+                                if (className.lastIndexOf('lang-', 0) === 0) {
+                                    lan_class = className;
+                                    break;
+                                }
+                            }
                         }
                         
-                    }
+                        childNode.className = "line-numbers "+getLanguageClassName(lan_class);
+                        childNode.setAttribute("data-prismjs-copy","复制");
+                        childNode.setAttribute("data-prismjs-copy-error","按Ctrl+C复制");
+                        childNode.setAttribute("data-prismjs-copy-success","复制成功");
+
+
+                        let nodeHtml = "";
+
+                        //删除code节点
+                        let preChildNodeList = childNode.childNodes;
+                        for(let p = 0;p < preChildNodeList.length;p++){
+                            let preChildNode = preChildNodeList[p];
+                            if(preChildNode.nodeName.toLowerCase() == "code" ){
+                                nodeHtml += preChildNode.innerHTML;
+                                preChildNode.parentNode.removeChild(preChildNode);
+                            }
+                            
+                        }
+                        
+                        let dom = document.createElement('code');
+                        dom.className = "line-numbers "+getLanguageClassName(lan_class);
+                        dom.innerHTML=nodeHtml;
+                        
                     
-                    let dom = document.createElement('code');
-                    dom.className = "line-numbers "+getLanguageClassName(lan_class);
-                    dom.innerHTML=nodeHtml;
+                        childNode.appendChild(dom);
+                    }
+
+                    
                     
                    
-                    childNode.appendChild(dom);
-                
                 }
                 
                 bindNode(childNode);
@@ -1562,7 +1831,7 @@
 
 
     //递归渲染绑定节点
-    const renderBindNode = (node:any) => {	
+    const renderBindNode = async (node:any) => {	
          //先找到子节点
          let nodeList = node.childNodes;
         for(let i = 0;i < nodeList.length;i++){
@@ -1574,8 +1843,72 @@
             if(childNode.nodeType == 1){
                 //处理代码标签
                 if(childNode.nodeName.toLowerCase() == "pre" ){
-                    Prism.highlightAllUnder(childNode);
+                    let firstChildNode:any = null;//第一个子节点
+                    for(let p = 0;p < childNode.childNodes.length;p++){
+                        let preChildNode = childNode.childNodes[p];
+                        if(preChildNode.nodeName.toLowerCase() == "code" ){
+                            firstChildNode = preChildNode;
+                            break;
+                        }
+                    }
+                   
+                    if(firstChildNode != null && firstChildNode.getAttribute("class")!= null){
+                        if(firstChildNode.getAttribute("class") != null && firstChildNode.getAttribute("class").indexOf("language-mermaid") != -1){
+                           
+                            if(firstChildNode.innerHTML){
+                                  //  const { svg } = await mermaid.render('mermaid_'+random, unescapeHtml(firstChildNode.innerHTML));
+
+                              //  childNode.innerHTML = svg;
+
+                              const mermaid_container = document.createElement('div')
+                                mermaid_container.style.lineHeight = 'initial' //重置行高
+
+                                childNode.replaceWith(mermaid_container);
+                                mermaid.render(
+                                    'mermaid_'+random,
+                                    unescapeHtml(firstChildNode.innerHTML),
+                                    // @ts-ignore
+                                    mermaid_container
+                                ).then((svgCode) => {
+                                    // @ts-ignore
+                                    mermaid_container.innerHTML = svgCode.svg
+                                
+                                })
+                                .catch((err) => {
+                                // console.error(err);
+                                })
+                            }
+                        }else if(firstChildNode.getAttribute("class").indexOf("language-mermaid") != -1){
+                            
+                        }else{
+                            Prism.highlightAllUnder(childNode);
+                        }
+                    }
+                   
+                    
+                   
+                }else if(childNode.nodeName.toLowerCase() == "span"){
+                    if(childNode.getAttribute("class") != null && childNode.getAttribute("class").indexOf("math-inline") != -1 && childNode.childNodes.length==1 && childNode.childNodes[0].nodeType ==3){
+                        let tex = katex.renderToString(unescapeHtml(childNode.innerHTML), {
+                            throwOnError: false,
+                            displayMode:false//内联模式
+                        });
+                        childNode.innerHTML = tex;
+                    }
+                }else if(childNode.nodeName.toLowerCase() == "div"){
+                    if(childNode.getAttribute("class") != null && childNode.getAttribute("class").indexOf("math-display") != -1 && childNode.childNodes.length==1 && childNode.childNodes[0].nodeType ==3){
+                        let tex = katex.renderToString(unescapeHtml(childNode.innerHTML), {
+                            throwOnError: false,
+                            displayMode:true//块模式
+                        });
+                        childNode.innerHTML = tex;
+
+                    }
                 }
+
+               
+
+
                 renderBindNode(childNode);
             }
         }
@@ -1786,6 +2119,8 @@
                 let data =  response.data;
                 state.allowComment = data.allowComment;
 
+                
+
                 nextTick(()=>{
                     if(state.topic?.allow && data.allowComment){
                         if(data.availableTag != null && data.availableTag != ''){
@@ -1801,12 +2136,45 @@
                                     }
                                 }
                             }
-
-                            state.availableTag = availableTagObject;//话题编辑器允许使用标签
+                            if(data.supportEditor == 30 || data.supportEditor == 40){
+                                availableTagObject.push("toggleEditor");
+                            }
+                            state.availableTag = availableTagObject;//评论编辑器允许使用标签
                         }
                         
                         state.fileSystem = data.fileSystem;//文件存储系统
-
+                        state.supportEditor = data.supportEditor;//支持编辑器 10.仅富文本编辑器 20.仅Markdown编辑器  30.富文本编辑器优先 40.Markdown编辑器优先
+                        
+                        if(state.addCommentEditorPlugin != null && state.addCommentEditorPlugin.length ==0){
+                            //添加插件
+                            state.addCommentEditorPlugin.push(...markdownPlugins);
+                            state.addCommentEditorPlugin.push(emoji());
+                            state.addCommentEditorPlugin.push(config(false));
+                            
+                            if(state.supportEditor == 30 || state.supportEditor == 40){//10.仅富文本编辑器 20.仅Markdown编辑器  30.富文本编辑器优先 40.Markdown编辑器优先
+                                state.addCommentEditorPlugin.push(
+                                    toggleEditor((editorId: string)=>{handleAddCommentToggleRichtextEditor(editorId)})
+                                );
+                            }
+                            state.addCommentEditorPlugin.push(
+                                help(state.availableTag,[])
+                            );
+                            if(state.availableTag?.indexOf('image') != -1){
+                                state.addCommentEditorPlugin.push(
+                                    imageUpload("user/control/comment/uploadImage?topicId="+state.topicId,'file',state.fileSystem)
+                                );
+                                state.addCommentEditorPlugin.push(
+                                    pasteImageUpload("user/control/comment/uploadImage?topicId="+state.topicId,'file',state.fileSystem)
+                                );
+                            }    
+                            
+                        }
+                              
+                      
+                        
+                        if(data.supportEditor == 20 || data.supportEditor == 40){
+                            state.isAddCommentMarkdown = true;
+                        }
 
                         if (data.captchaKey != undefined && data.captchaKey != '') {
                             
@@ -1815,20 +2183,22 @@
                             Object.assign(state.captchaValue, {['addComment-'+topicId] : ''});
                             replaceCaptcha("addComment-"+topicId);//刷新验证码
                         }
-
-
+                       
                         if (Object.keys(state.addCommentEditorCreateParameObject).length === 0) {//等于空
                             let uploadPath = "user/control/comment/uploadImage?topicId="+topicId;
                         
-                            //创建富文本编辑器
-                            state.addCommentEditor = createEditor(formAddCommentContentRef.value, state.availableTag, uploadPath, null,state.fileSystem);
-                            if(Object.keys(state.addCommentEditor).length > 0){
-                                state.addCommentEditorCreateParameObject = {
-                                    ref:formAddCommentContentRef.value,
-                                    availableTag:state.availableTag,
-                                    uploadPath:uploadPath,
-                                    userGradeList:null
-                                }
+                           
+                            if(!state.isAddCommentMarkdown){
+                                //创建富文本编辑器
+                                state.addCommentEditor = createEditor(formAddCommentContentRef.value, state.availableTag, uploadPath, null,state.fileSystem,(editorId: string)=>{
+                                    handleAddCommentToggleMarkdownEditor(editorId);
+                                });
+                            }
+                            state.addCommentEditorCreateParameObject = {
+                                ref:formAddCommentContentRef.value,
+                                availableTag:state.availableTag,
+                                uploadPath:uploadPath,
+                                userGradeList:null
                             }
                         }
                         
@@ -1936,10 +2306,18 @@
                 formData.append('topicId', state.topicId);
 
                 
-
-                if(formAddCommentContentRef.value.value != null && formAddCommentContentRef.value.value !=''){
-                    formData.append('content', formAddCommentContentRef.value.value);
+                if(state.isAddCommentMarkdown){
+                    formData.append('isMarkdown', state.isAddCommentMarkdown.toString());
+                    formData.append('markdownContent', state.addCommentMarkdownContent);
+                }else{
+                    if(formAddCommentContentRef.value.value != null && formAddCommentContentRef.value.value !=''){
+                        formData.append('content', formAddCommentContentRef.value.value);
+                    }
                 }
+
+
+
+               
                 
                 if(state.captchaKey.get(_key) != undefined && state.captchaKey.get(_key) != null){
                     //验证码Key
@@ -1971,12 +2349,20 @@
                                 }
                             })
 
-                            //清空字段
-                            state.addCommentEditor.html("");
-                            //自动展开内容
-                            state.addCommentEditor.autoExpandContent();
-                            //state.addCommentEditor.remove();
-                            //state.addCommentEditorCreateParameObject = {};
+                            state.addCommentMarkdownContent = "";
+
+
+
+                            if (Object.keys(state.addCommentEditor).length != 0) {//不等于空
+                                //清空字段
+                                state.addCommentEditor.html("");
+                                //自动展开内容
+                                state.addCommentEditor.autoExpandContent();
+                                //state.addCommentEditor.remove();
+                                //state.addCommentEditorCreateParameObject = {};
+                            }
+
+                           
 
                             //重置表单
                             //formAddCommentRef.value?.resetFields();
@@ -2056,6 +2442,8 @@
             let _comment = data.comment;
 
             if(data.allowComment && _comment != undefined){
+                Object.assign(state.editCommentMarkdownContent, {[_comment.id] : _comment.markdownContent});
+                
                 state.editCommentFormView.set(comment.id,true);
 
                 nextTick(()=>{
@@ -2082,6 +2470,24 @@
                     state.fileSystem = data.fileSystem;//文件存储系统
 
 
+                    if(state.editCommentEditorPlugin != null && state.editCommentEditorPlugin.length ==0){
+                        //添加插件
+                        state.editCommentEditorPlugin.push(...markdownPlugins);
+                        state.editCommentEditorPlugin.push(emoji());
+                        state.editCommentEditorPlugin.push(config(true));
+                        state.editCommentEditorPlugin.push(
+                            help(availableTag,[])
+                        );
+                        if(availableTag?.indexOf('image') != -1){
+                            state.editCommentEditorPlugin.push(
+                                imageUpload("user/control/comment/uploadImage?topicId="+state.topicId,'file',state.fileSystem)
+                            );
+                            state.editCommentEditorPlugin.push(
+                                pasteImageUpload("user/control/comment/uploadImage?topicId="+state.topicId,'file',state.fileSystem)
+                            );
+                        }   
+                    }
+
                     if (data.captchaKey != undefined && data.captchaKey != '') {
                         
                         state.showCaptcha.set(_key,true)
@@ -2098,9 +2504,17 @@
                         if(_commentId == comment.id){
                             let uploadPath = "user/control/comment/uploadImage?topicId="+state.topicId;
                 
-                            //创建富文本编辑器
-                            let editor = createEditor(editCommentElement, availableTag, uploadPath, null,state.fileSystem);
-                            state.editCommentEditorMap.set(comment.id,editor);
+                            if(_comment.isMarkdown != null && _comment.isMarkdown == true){
+                                state.isEditCommentMarkdownMap.set(comment.id,true);
+                            }else{
+                                state.isEditCommentMarkdownMap.set(comment.id,false);
+                            }
+                            if(!state.isEditCommentMarkdownMap.get(comment.id)){
+                                //创建富文本编辑器
+                                let editor = createEditor(editCommentElement, availableTag, uploadPath, null,state.fileSystem,(editorId: string)=>{});
+                                state.editCommentEditorMap.set(comment.id,editor);
+                            }
+                            
 
                             state.editCommentEditorCreateParameMap.set(comment.id, {
                                     ref:editCommentElement,
@@ -2168,15 +2582,25 @@
                 let formData = new FormData();
                 formData.append('commentId', commentId);
 
-                for(let i = 0; i<state.editCommentElementNodes.length; i++){
-                    let editCommentElement = state.editCommentElementNodes[i];
-                    let _commentId = editCommentElement.getAttribute("commentId");
-                    
-                    if(_commentId == commentId){
-                        formData.append('content', editCommentElement.value);
-                        break;
+
+
+                if(state.isEditCommentMarkdownMap.get(commentId)!= undefined && state.isEditCommentMarkdownMap.get(commentId) == true){
+                    if(state.editCommentMarkdownContent[commentId] != undefined){
+                        formData.append('markdownContent', state.editCommentMarkdownContent[commentId]);
+                    }
+                }else{
+                    for(let i = 0; i<state.editCommentElementNodes.length; i++){
+                        let editCommentElement = state.editCommentElementNodes[i];
+                        let _commentId = editCommentElement.getAttribute("commentId");
+                        
+                        if(_commentId == commentId){
+                            formData.append('content', editCommentElement.value);
+                            break;
+                        }
                     }
                 }
+                
+                
                 
                 if(state.captchaKey.get(_key) != undefined && state.captchaKey.get(_key) != null){
                     //验证码Key
@@ -2215,7 +2639,20 @@
                                 state.editCommentEditorMap.delete(commentId);
                                 state.editCommentEditorCreateParameMap.delete(commentId);
                             }
-                            state.editCommentFormView.set(commentId,false);
+                            
+
+
+
+                            if(state.editCommentMarkdownContent[commentId] != undefined){
+                               state.editCommentMarkdownContent[commentId] = ""
+                            }
+                           
+                            
+                            nextTick(()=>{//需要延迟才能让state.editCommentMarkdownContent[commentId]的设置生效
+                                state.editCommentFormView.set(commentId,false);
+                            })
+
+
 
 
                             //重置表单
@@ -2297,7 +2734,6 @@
         .then((response: AxiosResponse) => {
             if(response){
                 let data =  response.data;
-
                 let quoteContent = data.quoteContent;
 
 
@@ -2321,12 +2757,39 @@
                                     }
                                 }
                             }
-
+                            if(data.supportEditor == 30 || data.supportEditor == 40){
+                                availableTagObject.push("toggleEditor");
+                            }
                             availableTag = availableTagObject;//编辑器允许使用标签
                         }
                         
                         state.fileSystem = data.fileSystem;//文件存储系统
-
+                        state.supportEditor = data.supportEditor;//支持编辑器 10.仅富文本编辑器 20.仅Markdown编辑器  30.富文本编辑器优先 40.Markdown编辑器优先
+                        
+                        if(state.quoteCommentEditorPlugin != null && state.quoteCommentEditorPlugin.length ==0){
+                            //添加插件
+                            state.quoteCommentEditorPlugin.push(...markdownPlugins);
+                            state.quoteCommentEditorPlugin.push(emoji());
+                            state.quoteCommentEditorPlugin.push(config(true));  
+                            if(state.supportEditor == 30 || state.supportEditor == 40){//10.仅富文本编辑器 20.仅Markdown编辑器  30.富文本编辑器优先 40.Markdown编辑器优先
+                                state.quoteCommentEditorPlugin.push(
+                                    toggleEditor((editorId: string)=>{handleQuoteCommentToggleRichtextEditor(editorId)})
+                                );
+                            }
+                            state.quoteCommentEditorPlugin.push(
+                                help(availableTag,[])
+                            );
+                            if(availableTag?.indexOf('image') != -1){
+                                state.quoteCommentEditorPlugin.push(
+                                    imageUpload("user/control/comment/uploadImage?topicId="+state.topicId,'file',state.fileSystem)
+                                );
+                                state.quoteCommentEditorPlugin.push(
+                                    pasteImageUpload("user/control/comment/uploadImage?topicId="+state.topicId,'file',state.fileSystem)
+                                );
+                            }  
+                        }
+                              
+                        
 
                         if (data.captchaKey != undefined && data.captchaKey != '') {
                             
@@ -2342,11 +2805,22 @@
                             let _commentId = quoteElement.getAttribute("commentId");
                             quoteElement.value = "";
                             if(_commentId == comment.id){
+                                
+                                if(data.supportEditor == 20 || data.supportEditor == 40){
+                                    state.isQuoteCommentMarkdownMap.set(comment.id,true);
+                                }else{
+                                    state.isQuoteCommentMarkdownMap.set(comment.id,false);
+                                }
+
                                 let uploadPath = "user/control/comment/uploadImage?topicId="+state.topicId;
-                    
-                                //创建富文本编辑器
-                                let editor = createEditor(quoteElement, availableTag, uploadPath, null,state.fileSystem);
-                                state.quoteEditorMap.set(comment.id,editor);
+                                if(!state.isQuoteCommentMarkdownMap.get(comment.id)){
+                                    //创建富文本编辑器
+                                    let editor = createEditor(quoteElement, availableTag, uploadPath, null,state.fileSystem,(editorId: string)=>{
+                                        handleQuoteCommentToggleMarkdownEditor(editorId);
+                                    });
+                                    state.quoteEditorMap.set(comment.id,editor);
+                                }
+                               
 
                                 state.quoteEditorCreateParameMap.set(comment.id, {
                                         ref:quoteElement,
@@ -2415,15 +2889,26 @@
                 let formData = new FormData();
                 formData.append('commentId', commentId);
 
-                for(let i = 0; i<state.quoteElementNodes.length; i++){
-                    let quoteElement = state.quoteElementNodes[i];
-                    let _commentId = quoteElement.getAttribute("commentId");
-                    
-                    if(_commentId == commentId){
-                        formData.append('content', quoteElement.value);
-                        break;
+                
+
+
+                if(state.isQuoteCommentMarkdownMap.get(commentId)!= undefined && state.isQuoteCommentMarkdownMap.get(commentId) == true){
+                    formData.append('isMarkdown', state.isQuoteCommentMarkdownMap.get(commentId).toString());
+                    if(state.quoteCommentMarkdownContent[commentId] != undefined){
+                        formData.append('markdownContent', state.quoteCommentMarkdownContent[commentId]);
+                    }
+                }else{
+                    for(let i = 0; i<state.quoteElementNodes.length; i++){
+                        let quoteElement = state.quoteElementNodes[i];
+                        let _commentId = quoteElement.getAttribute("commentId");
+                        
+                        if(_commentId == commentId){
+                            formData.append('content', quoteElement.value);
+                            break;
+                        }
                     }
                 }
+
                 
                 if(state.captchaKey.get(_key) != undefined && state.captchaKey.get(_key) != null){
                     //验证码Key
@@ -2462,8 +2947,15 @@
                                 state.quoteEditorMap.delete(commentId);
                                 state.quoteEditorCreateParameMap.delete(commentId);
                             }
-                            state.quoteFormView.set(commentId,false);
 
+                            if(state.quoteCommentMarkdownContent[commentId] != undefined){
+                               state.quoteCommentMarkdownContent[commentId] = ""
+                            }
+                           
+                            
+                            nextTick(()=>{//需要延迟才能让state.quoteCommentMarkdownContent[commentId]的设置生效
+                                state.quoteFormView.set(commentId,false);
+                            })
 
                             //重置表单
                             //formAddCommentRef.value?.resetFields();
@@ -3886,7 +4378,48 @@
             state.affix_offset = -(rightOffsetHeight - clientHeight + 10);
         }
     }
-   
+
+    //清除编辑器
+    const clearEditor = () => {
+        if (Object.keys(state.addCommentEditor).length != 0) {//不等于空
+            state.addCommentEditor.html("");//清空字段
+			state.addCommentEditor.remove();
+            state.addCommentEditor = {};
+		}
+        state.addCommentEditorCreateParameObject = {};
+		
+		state.quoteEditorMap.forEach(function(value,key){
+            value.html("");//清空字段
+			value.remove();
+	    });
+        state.quoteEditorMap.clear();
+		
+		state.editCommentEditorMap.forEach(function(value,key){
+            value.html("");//清空字段
+			value.remove();
+	    });
+		state.editCommentEditorMap.clear();
+
+        state.addCommentMarkdownContent='';
+
+        state.isQuoteCommentMarkdownMap.clear();
+        state.quoteCommentMarkdownContent = {} as any;//引用评论markdown编辑内容 key:评论Id value:评论内容
+
+
+        state.isEditCommentMarkdownMap.clear();
+        state.editCommentMarkdownContent = {} as any;//修改评论markdown编辑内容 key:评论Id value:评论内容
+
+        state.addCommentEditorPlugin.length = 0;//插件
+        state.quoteCommentEditorPlugin.length = 0;//插件
+        state.editCommentEditorPlugin.length = 0;//插件
+
+        state.editCommentFormView.clear() //修改评论表单
+        state.editCommentEditorCreateParameMap.clear()//修改评论编辑器的创建参数
+
+        state.quoteFormView.clear() //评论引用表单
+        state.quoteEditorCreateParameMap.clear()//引用评论编辑器的创建参数
+    }
+  
 
   
     //导航守卫
@@ -3908,14 +4441,19 @@
             if(to.query.replyId != undefined){
                 replyId = to.query.replyId as string
             }
+            //清除编辑器
+            clearEditor();
             queryTopic(topicId,()=>{
+                state.topicId = topicId;
                 queryAddComment(topicId);
                 queryFollowerCount(state.topic.userName);//查询粉丝总数
                 queryFollowing(state.topic.userName);//查询是否已关注该用户
                 queryAnswerCount(state.topic.userName);
                 queryFollowCount(state.topic.userName);
                 queryGiveRedEnvelopeContent(state.topic.giveRedEnvelopeId);
-                queryReceiveRedEnvelopeUser(state.topic.giveRedEnvelopeId, 1)
+                queryReceiveRedEnvelopeUser(state.topic.giveRedEnvelopeId, 1);
+
+               
             });
             queryAlreadyCollected(topicId);
             queryFavoriteCount(topicId);
@@ -3929,6 +4467,10 @@
         next();
     });
 
+    //清空
+    onBeforeUpdate(() => {
+        topicRefs.value = {}
+    })
 
     onMounted(() => {
         let page:number|undefined = router.currentRoute.value.query.page != undefined ? parseInt(router.currentRoute.value.query.page as string) :undefined;
@@ -3961,6 +4503,7 @@
     onUnmounted (()=>{
         //清除播放器
         clearVideoPlayer();
+
 
     })
 
@@ -4106,6 +4649,261 @@
                         float: left;margin-left: 3px;
                     }
                 }
+                :deep(.topicMarkdownContent){
+                    border-top:1px solid $color-black-20;
+                    margin-top:5px;
+                    padding:20px 0px;
+                    color:$color-black-90;
+                    font-size:16px; 
+                    line-height:1.75; 
+                    word-wrap:break-word;
+                    min-height: 100px;
+                    .cancelAccount{
+                        display: inline-block;
+                        vertical-align: middle;
+                        padding: 6px 6px;
+                        font-size: 14px;
+                        line-height: 14px;
+                        -webkit-border-radius: 2px;
+                        -moz-border-radius: 2px;
+                        border-radius: 2px;
+                        color: $color-black-50;
+                        background-color: $color-black-10;
+                        margin-bottom: 6px;
+                    }
+                    .lastUpdateTime{
+                        text-align: center;padding-top: 20px; padding-bottom: 30px;color: $color-black-60;font-size: 15px;
+                    }
+                    a{
+                        color: #1890ff;
+                        font-size:16px;
+                    }
+                    //自动换行
+                    pre{
+                        white-space:pre-wrap;
+                    }
+                    
+                    ol{
+                        list-style: decimal;
+                    }
+                    ol li{
+                        list-style-type:decimal;
+                        list-style-position:inside;
+                    }
+                    ul{
+                        list-style: disc;
+                    }
+                   // ul li{
+                     //   list-style-type:disc;
+                  //  }
+                    .task-list-item {
+                        list-style-type:none;
+                    }
+                    p{
+                        font-size:16px;
+                        word-wrap:break-word
+                    }
+                    code[class*="language-"]{
+                        padding: 0 0;
+                    }
+                    img{
+                        max-width:100%;height:auto;border:none;background:none;margin:0;padding:0; 
+                        cursor: -webkit-zoom-in;
+                        cursor: zoom-in;
+                        vertical-align: sub;
+                    }
+                    .download{
+                        color: #1890ff;
+                        margin: 0 5px 0 5px;
+                        cursor: pointer;
+                        font-size:16px;
+                        .link-icon {
+                            position: relative;
+                            top: 4px;
+                            margin-right: 2px;
+                            color:#1890ff;
+                        }
+                    }
+                    table {
+                        border-collapse: separate; 
+                        border-spacing: 0; 
+                        border-top: 1px solid $color-black-30;
+                        border-left: 1px solid $color-black-30;
+                        th {
+                            font-weight: 600
+                        }
+                        th, td {
+                            border-right: 1px solid $color-black-30; 
+                            border-bottom: 1px solid $color-black-30;
+                            padding: 6px 13px
+                        }
+                        tr {
+                            background-color: #fff;
+                            border-top: 1px solid $color-black-30;
+                            &:nth-child(2n) {
+                                background-color: $color-black-10;
+                            }
+                        }
+                    }
+                    iframe{
+                        width:100%; height: 550px;padding:10px 0px; 
+                    }
+                    player{
+                        width: 100%;
+                        height: 576px;
+                        display: block;
+                        margin-top: 10px;
+                    }
+                    .dplayer-process {
+                        position: absolute;
+                        top: 0;
+                        bottom: 0;
+                        left: 0;
+                        right: 0;
+                        z-index: 99;
+                        .box{
+                            position: relative;
+                            width: 100%;
+                            height: 100%;
+                            .prompt{
+                                width: 250px;
+                                height: 80px;
+                                position: absolute;
+                                left: 0;
+                                top: 0;
+                                right: 0;
+                                bottom: 0;
+                                margin: auto;
+                                padding :0px 30px;
+                                border-radius :3px;
+                                color: #fff;
+                                line-height: 80px;
+                                font-size: 20px;
+                                background-color:rgb(0,0,0);
+                                opacity:0.7;
+                                filter:alpha(opacity=70);
+                                text-align: center;
+                            }
+                        }
+                    }
+                    hide{
+                        display:block;
+                        background: $color-black-10;
+                        min-height:100px;
+                        margin-left: 10px;
+                        margin-right: 10px;
+                        margin-top: 17px;
+                        margin-bottom: 15px;
+                        border: 3px dashed $color-black-30;
+                        border-radius: 5px;
+                        .hide-box{
+                            margin: 20px;position: relative;text-align: center;
+                        }
+                        .background-image{
+                            margin: auto;
+                            margin-top:15px;
+                            color: $color-black-40;
+                        }
+                        .background-prompt{
+                            margin-top: 5px; color: $color-black-50;font-size: 16px;
+                        }
+                        .highlight{
+                            font-weight:bold;
+                        }
+                        .input-box{
+                            pointer-events: none;
+                            margin: auto; 
+                            margin-top: 10px;
+                            margin-bottom:25px; 
+                            border:$color-black-70 solid 2px;
+                            width:226px; 
+                            height:26px; 
+                           // overflow:hidden; 
+                            border-radius: 2px;
+                            position: relative;
+                            &:hover{
+                                border:$color-black-80 solid 2px;
+                                .button{
+                                    border:transparent solid 0px; 
+                                    background:$color-black-80;
+                                }
+                            }
+                            .text{ 
+                                pointer-events:auto;
+                                width:145px; 
+                                height:26px; 
+                                line-height:26px; 
+                                border:0; 
+                                float:left; 
+                                font-size:14px; 
+                                color:$color-black-80; 
+                                text-indent: 6px; 
+                                vertical-align:middle;
+                                outline:none; 
+                                background: $color-black-10;
+                            }
+                            .button{
+                                position: absolute;
+                                top: -1px;
+                                right: -2px;
+                                pointer-events:auto; 
+                                display: inline-block;
+                                white-space:nowrap;
+                                width:80px;
+                                height:28px; 
+                                vertical-align: middle;
+                                font-size: 15px;
+                                line-height: 28px;
+                                -webkit-border-radius: 0px 2px 2px 0px;
+                                -moz-border-radius: 0px 2px 2px 0px;
+                                border-radius: 0px 2px 2px 0px;
+                                color:#fff;
+                                background-color:$color-black-70;
+                                cursor:pointer;
+                                user-select:none;
+                                &:hover{
+                                    background:$color-black-80;
+                                }
+                            }
+                        }
+                        .submit-box{
+                            margin-top: 10px;
+                            margin-bottom:5px; 
+                            display: inline-block;
+                            white-space:nowrap;
+                            width:80px;
+                            height:30px; 
+                            vertical-align: middle;
+                            font-size: 15px;
+                            line-height: 30px;
+                            -webkit-border-radius: 2px;
+                            -moz-border-radius: 2px;
+                            border-radius: 2px;
+                            color:#fff;
+                            background-color:$color-black-70;
+                            cursor:pointer;
+                            user-select:none;
+                            &:hover{
+                                background:$color-black-80;
+                            }
+                        }
+                        .input-box{
+                            .text::-webkit-input-placeholder {
+                                color: $color-black-70;
+                            }
+                            .text:-ms-input-placeholder {
+                                color: $color-black-70;
+                            }
+                            .text:-moz-placeholder {
+                                color: $color-black-70;
+                            }
+                            .text::-moz-placeholder {
+                                color: $color-black-70;
+                            }
+                        }
+                    }
+                }
+
                 :deep(.topicContent){
                     border-top:1px solid $color-black-20;
                     margin-top:5px;
@@ -4144,7 +4942,18 @@
                         cursor: zoom-in;
                         vertical-align: sub;
                     }
-
+                    .download{
+                        color: #1890ff;
+                        margin: 0 5px 0 5px;
+                        cursor: pointer;
+                        font-size:16px;
+                        .link-icon {
+                            position: relative;
+                            top: 4px;
+                            margin-right: 2px;
+                            color:#1890ff;
+                        }
+                    }
                     /** 解决Chrome内核浏览器DPI缩放比例高于100%时部分边框变粗问题   本方案需删除table样式 border="1" bordercolor="#000000" */
                     table {
                         border-collapse: separate; 
@@ -4637,7 +5446,78 @@
                     color:$color-black-50;
                 }
             }
-            .commentContent{
+            :deep(.commentMarkdownContent){
+                padding:0px;
+                word-wrap:break-word;
+                color:$color-black-90;
+                font-size:15px; 
+                line-height:1.75; 
+                margin-top: 20px;
+                .cancelAccount{
+                    display: inline-block;
+                    vertical-align: middle;
+                    padding: 6px 6px;
+                    font-size: 14px;
+                    line-height: 14px;
+                    -webkit-border-radius: 2px;
+                    -moz-border-radius: 2px;
+                    border-radius: 2px;
+                    color: $color-black-50;
+                    background-color: $color-black-10;
+                }
+                img {
+                    max-width:100%;
+                    height:auto;
+                    border:none;
+                    background:none;
+                    margin:0;
+                    padding:0;
+                    vertical-align: sub;
+                }
+                p{
+                    font-size:16px;
+                    word-wrap:break-word
+                }
+                code[class*="language-"]{
+                    padding: 0 0;
+                }
+                table {
+                    width: 100%;
+                    th {
+                        font-weight: 600
+                    }
+                    td,th {
+                        border: 1px solid $color-black-30;
+                        padding: 6px 13px
+                    }
+                    tr {
+                        background-color: #fff;
+                        border-top: 1px solid $color-black-30;
+                        &:nth-child(2n) {
+                            background-color: $color-black-10;
+                        }
+                    }
+                }
+                ol{
+                    li{ 
+                        list-style-type:decimal;
+                        list-style-position:inside;
+                    }
+                }
+                ul{
+                    li{ 
+                        margin-left:20px;
+                        list-style-type:disc;
+                    }
+                }
+                .task-list-item {
+                    list-style-type:none;
+                }
+                iframe{
+                    width:100%; height: 550px;padding:10px 0px; 
+                }
+            }
+            :deep(.commentContent){
                 padding:0px;
                 word-wrap:break-word;
                 color:$color-black-90;
@@ -4932,14 +5812,14 @@
                                     left: -45px;
                                 }
                                 .friendAvatarBox{
-                                position:absolute;
+                                    position:absolute;
                                     border-radius:100%;
                                     left: 0px;
                                     img{
                                         border-radius:100%;
-                                        width: 40px;
-                                        height: 40px;
-                                        margin-top: -1px;
+                                        width: 20px;
+                                        height: 20px;
+                                        margin-top: 10px;
                                     }
                                 }
                                 
@@ -4947,7 +5827,8 @@
                                     color:$color-black-60;
                                     font-size:14px;
                                     float: left;
-                                    margin-left: 36px;
+                                    margin-left: 15px;
+                                    font-weight: normal;
                                     .cancelNickname{
                                         font-weight:normal;
                                         margin-right: 3px;
@@ -4964,7 +5845,7 @@
                                         color: $color-black-60; 
                                         font-size: 14px;
                                         position: relative;
-                                        top: 11px;
+                                        top: 10px;
                                         max-width: 130px;
                                         overflow:hidden; //超出的文本隐藏
                                         text-overflow:ellipsis; //溢出用省略号显示
@@ -4984,7 +5865,7 @@
                                         color:#fff;
                                         background-color:#4cc8ff;
                                         position: relative;
-                                        top: 4px;
+                                        top: 3px;
                                     }
                                 }
                             }
@@ -5126,6 +6007,27 @@
         background: #fff;
         padding:15px 15px 15px 15px;
         box-shadow: 0 0px 3px 0 rgba(0,0,0,.02), 0 4px 8px 0 rgba(0,0,0,.02);
+
+        :deep(.bytemd-split){
+            height: calc(100vh - 100px);
+        }
+        :deep(.bytemd-split .CodeMirror-scroll){//让外层滚动条不滚动
+            overscroll-behavior:  contain;
+        }
+        :deep(.bytemd-split .bytemd-preview){//让外层滚动条不滚动
+            overscroll-behavior:  contain;
+        }
+        :deep(.bytemd-editor){
+            min-height: 180px; 
+        }
+        :deep(.CodeMirror-sizer){
+            min-height: 175px !important; 
+        }
+        :deep(.bytemd-preview){
+            min-height: 180px; 
+        }
+        
+
         .form-action{
             position: relative;
            
@@ -5140,6 +6042,7 @@
                 h2{
                     font-size: 15px;
                     color: $color-black-40;
+                    font-weight: normal;
                 }
             }
         }
@@ -5181,6 +6084,78 @@
             .icon{
                 position: absolute;font-size: 50px;top: -38px;left: -42px;color: $color-black-10;
             }
+        }
+        :deep(.bytemd-split){
+            height: calc(100vh - 100px);
+        }
+        :deep(.bytemd-split .CodeMirror-scroll){//让外层滚动条不滚动
+            overscroll-behavior:  contain;
+        }
+        :deep(.bytemd-split .bytemd-preview){//让外层滚动条不滚动
+            overscroll-behavior:  contain;
+        }
+        :deep(.bytemd-editor){
+            min-height: 180px; 
+        }
+        :deep(.CodeMirror-sizer){
+            min-height: 175px !important; 
+        }
+        :deep(.bytemd-preview){
+            min-height: 180px; 
+        }
+        /** 隐藏‘斜体图标’ **/
+        :deep(.bytemd-toolbar-left [bytemd-tippy-path='2']) {
+            display: none;
+        }
+        /** 隐藏‘删除线图标’ **/
+        :deep(.bytemd-toolbar-left [bytemd-tippy-path='11']) {
+            display: none;
+        }
+        //编辑器边框
+        :deep(.bytemd-editor){
+            border-top: 1px solid $color-black-30;
+            border-left: 1px solid transparent;
+            border-right: 1px solid transparent;
+            
+            border-radius:0px;
+        }
+        :deep(.bytemd-status){
+            border: 1px solid transparent;
+            border-top: 1px solid $color-black-30;
+            border-radius:0px;
+        }
+        :deep(.bytemd-preview){
+            border-top: 1px solid $color-black-30;
+            border-left: 1px solid transparent;
+            border-right: 1px solid transparent;
+            border-radius:0px;
+        }
+        :deep(.bytemd-split .bytemd-editor){
+            border-right: 1px solid $color-black-30;
+        }
+        :deep(.bytemd-sidebar){
+            border-top-left-radius:0px;
+            border-left: 1px solid $color-black-30;
+        }
+        :deep(.bytemd-editor:has(~ .bytemd-sidebar)){
+            border-right: 1px solid $color-black-30;
+        }
+        :deep(.bytemd-editor:has(+ .bytemd-preview:not([style*='display:none']))){
+            border-right: 1px solid $color-black-30;
+        }
+        :deep(.bytemd-editor:has(~ .bytemd-hidden)){
+            border-right: 1px solid transparent;
+        }
+        :deep(.bytemd-preview:has(+ .bytemd-sidebar)){
+            border-right: 1px solid $color-black-30;
+        }
+        :deep(.bytemd-preview:has(~ .bytemd-hidden)){
+            border-right: 1px solid transparent;
+        }
+
+        /* 富文本编辑框颜色 */
+        :deep(.ke-edit) {
+            border: 1px solid transparent;
         }
         .submitButton{
             width: 130px;
@@ -5225,6 +6200,79 @@
         position: relative;
         padding:23px 20px 2px 20px;
         background: $color-black-10;
+
+        :deep(.bytemd-split){
+            height: calc(100vh - 100px);
+        }
+        :deep(.bytemd-split .CodeMirror-scroll){//让外层滚动条不滚动
+            overscroll-behavior:  contain;
+        }
+        :deep(.bytemd-split .bytemd-preview){//让外层滚动条不滚动
+            overscroll-behavior:  contain;
+        }
+        :deep(.bytemd-editor){
+            min-height: 180px; 
+        }
+        :deep(.CodeMirror-sizer){
+            min-height: 175px !important; 
+        }
+        :deep(.bytemd-preview){
+            min-height: 180px; 
+        }
+        /** 隐藏‘斜体图标’ **/
+        :deep(.bytemd-toolbar-left [bytemd-tippy-path='2']) {
+            display: none;
+        }
+        /** 隐藏‘删除线图标’ **/
+        :deep(.bytemd-toolbar-left [bytemd-tippy-path='11']) {
+            display: none;
+        }
+        //编辑器边框
+        :deep(.bytemd-editor){
+            border-top: 1px solid $color-black-30;
+            border-left: 1px solid transparent;
+            border-right: 1px solid transparent;
+            
+            border-radius:0px;
+        }
+        :deep(.bytemd-status){
+            border: 1px solid transparent;
+            border-top: 1px solid $color-black-30;
+            border-radius:0px;
+        }
+        :deep(.bytemd-preview){
+            border-top: 1px solid $color-black-30;
+            border-left: 1px solid transparent;
+            border-right: 1px solid transparent;
+            border-radius:0px;
+        }
+        :deep(.bytemd-split .bytemd-editor){
+            border-right: 1px solid $color-black-30;
+        }
+        :deep(.bytemd-sidebar){
+            border-top-left-radius:0px;
+            border-left: 1px solid $color-black-30;
+        }
+        :deep(.bytemd-editor:has(~ .bytemd-sidebar)){
+            border-right: 1px solid $color-black-30;
+        }
+        :deep(.bytemd-editor:has(+ .bytemd-preview:not([style*='display:none']))){
+            border-right: 1px solid $color-black-30;
+        }
+        :deep(.bytemd-editor:has(~ .bytemd-hidden)){
+            border-right: 1px solid transparent;
+        }
+        :deep(.bytemd-preview:has(+ .bytemd-sidebar)){
+            border-right: 1px solid $color-black-30;
+        }
+        :deep(.bytemd-preview:has(~ .bytemd-hidden)){
+            border-right: 1px solid transparent;
+        }
+
+        /* 富文本编辑框颜色 */
+        :deep(.ke-edit) {
+            border: 1px solid transparent;
+        }
         .head{
             .icon{
                 position: absolute;font-size: 50px;top: -38px;left: -42px;color: $color-black-10;

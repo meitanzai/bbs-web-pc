@@ -250,4 +250,91 @@ export function calc_add(arg1:string, arg2:string, digits:number) {
 	return "language-markup";
 }
 
+//添加节点到兄弟节点
+export function insertAfter(newElement:any, targetElement:any){
+    var parent = targetElement.parentNode;
+    if (parent.lastChild == targetElement) {
+        // 如果最后的节点是目标元素，则直接添加。因为默认是最后
+        parent.appendChild(newElement);
+    } else {
+        parent.insertBefore(newElement, targetElement.nextSibling);
+        //如果不是，则插入在目标元素的下一个兄弟节点 的前面。也就是目标元素的后面
+    }
+}
+
+
+ /**
+ * 判断省略text-overflow: ellipsis是否生效(样式需要有cell)
+ * 参考：https://github.com/element-plus/element-plus/blob/e345f5cfeae3277376f54e25f08945a7145c9ea4/packages/components/table/src/table-body/events-helper.ts#L111
+ * https://github.com/element-plus/element-plus/blob/dev/packages/components/table/src/table-body/events-helper.ts
+ * @param event 
+ * 返回值 true false
+ */
+export function isEllipsis(event: MouseEvent){
+    // 判断是否text-overflow, 如果是就显示tooltip
+    const cellChild = (event.target as HTMLElement).querySelector(
+    '.cell'
+    ) as HTMLElement
+    if(!cellChild) return false;
+
+    /** 
+    if(cellChild.clientWidth < cellChild.scrollWidth) {
+        console.log(cellChild.clientWidth+'文本溢出'+cellChild.scrollWidth);
+    } else {
+        console.log(cellChild.clientWidth+'文本没有溢出'+cellChild.scrollWidth);
+    }*/
+    
+    const range = document.createRange()
+    range.setStart(cellChild, 0)
+    range.setEnd(cellChild, cellChild.childNodes.length)
+
+    
+    let rangeWidth = range.getBoundingClientRect().width
+    // 所有子节点的高度总和
+    let rangeHeight = range.getBoundingClientRect().height
+    
+    /** 暂时不用
+    const offsetWidth = rangeWidth - Math.floor(rangeWidth)
+    if (offsetWidth < 0.001) {
+        rangeWidth = Math.floor(rangeWidth)
+    }
+    const offsetHeight = rangeHeight - Math.floor(rangeHeight)
+    if (offsetHeight < 0.001) {
+        rangeHeight = Math.floor(rangeHeight)
+    } */
+    rangeWidth = Math.floor(rangeWidth)
+    rangeHeight = Math.floor(rangeHeight)
+
+    const getPadding = (el: HTMLElement) => {
+        const style = window.getComputedStyle(el, null)
+        const paddingLeft = Number.parseInt(style.paddingLeft, 10) || 0
+        const paddingRight = Number.parseInt(style.paddingRight, 10) || 0
+        const paddingTop = Number.parseInt(style.paddingTop, 10) || 0
+        const paddingBottom = Number.parseInt(style.paddingBottom, 10) || 0
+        return {
+          left: paddingLeft,
+          right: paddingRight,
+          top: paddingTop,
+          bottom: paddingBottom,
+        }
+    }
+
+    // 还需要加上容器元素的上下padding 
+    const { top, left, right, bottom } = getPadding(cellChild)
+    const horizontalPadding = left + right
+    const verticalPadding = top + bottom
+
+    if (
+        rangeWidth + horizontalPadding > cellChild.offsetWidth ||
+        rangeHeight + verticalPadding > cellChild.offsetHeight ||
+        cellChild.scrollWidth > cellChild.offsetWidth
+    ) {
+
+        //console.log('文本溢出');
+        return true;
+    }else{
+        //console.log('文本没有溢出');
+        return false;
+    }
+}
 

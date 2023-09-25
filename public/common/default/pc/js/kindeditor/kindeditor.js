@@ -350,7 +350,7 @@ K.options = {
 		'formatblock', 'fontname', 'fontsize', '|', 'forecolor', 'hilitecolor', 'bold',
 		'italic', 'underline', 'strikethrough', 'lineheight', 'removeformat', '|', 'image', 'multiimage',
 		'flash', 'media', 'insertfile', 'table', 'hr', 'emoticons', 'baidumap', 'pagebreak',
-		'anchor', 'link', 'unlink', '|', 'about'
+		'anchor', 'link', 'unlink', '|', 'about', 'toggleEditor'
 	],
 	noDisableItems : ['source', 'fullscreen','embedVideo','uploadVideo'],
 	noToolbarItems : ['embedVideo','uploadVideo','hidePassword','hideComment','hideGrade','hidePoint','hideAmount'],//不在工具栏显示的标签
@@ -8084,6 +8084,7 @@ KindEditor.lang({
 	paste : '粘贴(Ctrl+V)',
 	plainpaste : '粘贴为无格式文本',
 	wordpaste : '从Word粘贴',
+	toggleEditor : '切换编辑器',
 	selectall : '全选(Ctrl+A)',
 	justifyleft : '左对齐',
 	justifycenter : '居中',
@@ -11931,6 +11932,25 @@ KindEditor.plugin('wordpaste', function(K) {
 		iframe[0].contentWindow.focus();
 	});
 });
+
+/*******************************************************************************
+* KindEditor - WYSIWYG HTML Editor for Internet
+* Copyright (C) 2006-2011 kindsoft.net
+* 切换编辑器
+*******************************************************************************/
+KindEditor.plugin('toggleEditor', function(K) {
+	var self = this, name = 'toggleEditor';
+
+	self.clickToolbar(name, function() {
+		if (self.options.afterToggleEditor) {
+			self.options.afterToggleEditor.call(self);
+		}
+		
+	});
+	
+
+});
+
 
 /**
 //浮动工具栏

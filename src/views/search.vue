@@ -484,6 +484,7 @@
                     .title {
                         margin: 0 5px 0 0;
                         font-size:0;/*父级元素设置font-size:0; 解决 display：inline-block两个元素之间的默认空格 */
+                        font-weight: normal;
                         a{
                             color: $color-black-90;
                             font-size: 18px;

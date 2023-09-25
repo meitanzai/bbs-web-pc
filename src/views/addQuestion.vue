@@ -1,7 +1,7 @@
 <!-- 提问题页 -->
 <template>
-    <!-- 页头 -->
-    <Header/>
+    <!-- 页头 :sticky="false"关闭浮动置顶功能 -->
+    <Header :sticky="false"/>
 
     <div class="main">
         <div class="main-container wrap backgroundModule main-fullScreen">
@@ -54,7 +54,12 @@
                     </el-form-item>
                     
                     <el-form-item :error="error.content">
-                        <textarea ref="contentRef" style="width:100%;height:400px;visibility:hidden;"></textarea>
+                        <div v-show="!form.isMarkdown" style="width: 100%;">
+                            <textarea :editorId="'addQuestion'" ref="contentRef" style="width:100%;height:400px;visibility:hidden;"></textarea>
+                        </div>
+                        <div v-if="form.isMarkdown" style="width: 100%;">
+                            <Editor  :editorId="'addQuestion'" :value="form.markdownContent" :plugins="form.addQuestionEditorPlugin" :locale="zhHans" :editorConfig="markdownEditorConfig" :sanitize="addQuestionSanitize" placeholder="请输入内容..." @change="handleMarkdownChange"/>
+                        </div>
                     </el-form-item>
                     <el-form-item :error="error.captchaValue" prop="captchaValue" v-if="form.showCaptcha" class="captcha-item">
                         <el-row>
@@ -105,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-    import { onMounted, ref, getCurrentInstance, ComponentInternalInstance, reactive, onUnmounted, computed, watch,} from 'vue'
+    import { onMounted, ref, getCurrentInstance, ComponentInternalInstance, reactive, onUnmounted, computed, watch, nextTick,} from 'vue'
     import { ElMessage, FormInstance} from 'element-plus'
     import { useRouter } from 'vue-router'
     import { useMeta} from 'vue-meta';
@@ -115,6 +120,19 @@
     import { onBeforeRouteUpdate } from 'vue-router';
     import { processErrorInfo } from '@/utils/tool';
     import { createEditor } from '@/utils/editor';
+    import { markdownPlugins,markdownEditorConfig,sanitize, markdownToHtml } from '@/utils/markdownEditor';
+    import { toggleEditor } from '@/utils/markdownPlugin/plugin-toggle-editor';
+    import { help } from '@/utils/markdownPlugin/plugin-help';
+    import { emoji } from '@/utils/markdownPlugin/plugin-emoji';
+    import { imageUpload } from '@/utils/markdownPlugin/plugin-image-upload';
+    import { pasteImageUpload } from '@/utils/markdownPlugin/plugin-paste-image';
+    import { fileUpload } from '@/utils/markdownPlugin/plugin-file-upload';
+    import { videoUpload } from '@/utils/markdownPlugin/plugin-video-upload';
+    import { hideContent } from '@/utils/markdownPlugin/plugin-hide-content';
+    import type { BytemdPlugin } from 'bytemd'
+    import { Editor } from '@bytemd/vue-next'
+    import zhHans from 'bytemd/locales/zh_Hans.json'
+
 
     const store = appStore();
     const router = useRouter();
@@ -151,8 +169,9 @@
         tagList:[] as Array<Tag>,//标签
         allowQuestion:true,//是否允许提问题
         userGradeList:[],//用户等级
-        availableTag:[],//问题编辑器允许使用标签
+        availableTag:[] as Array<string>,//问题编辑器允许使用标签
         fileSystem:0,//文件存储系统
+        supportEditor:10,//支持编辑器
 
         maxDeposit: '',//用户共有预存款
         maxPoint: '',//用户共有积分
@@ -178,6 +197,8 @@
         tagId:'',//标签Id
         title:'',//标题
         content:'',//内容
+        markdownContent:'',//markdown内容
+        isMarkdown:false,//是否使用markdown编辑器
 
         showCaptcha:false,//是否显示验证码
         captchaKey: '',//验证码key
@@ -187,6 +208,8 @@
 
         addQuestionEditor :{} as any,//添加问题编辑器
 		addQuestionEditorCreateParameObject :{} as any,//添加问题编辑器的创建参数
+
+        addQuestionEditorPlugin:[] as BytemdPlugin[],//添加问题Markdown编辑器插件
     });
     
 
@@ -202,6 +225,51 @@
         point: '',//悬赏积分
         captchaValue:'',//验证码
     })
+
+    //处理Markdown
+    const handleMarkdownChange = (value: string) => {
+        form.markdownContent = value;
+    }
+
+    //白名单
+    const addQuestionSanitize = (schema: any) => {
+        schema = sanitize(schema);
+
+        return schema;
+    }
+
+     //处理切换到富文本编辑器
+     const handleToggleRichtextEditor = (editorId: string) => {
+        form.isMarkdown = false;
+        nextTick(()=>{
+            if (Object.keys(form.addQuestionEditorCreateParameObject).length != 0) {//不等于空
+                //创建富文本编辑器
+                form.addQuestionEditor = createEditor(
+                    form.addQuestionEditorCreateParameObject.ref, 
+                    form.addQuestionEditorCreateParameObject.availableTag, 
+                    form.addQuestionEditorCreateParameObject.uploadPath, 
+                    form.addQuestionEditorCreateParameObject.userGradeList,
+                    form.fileSystem,
+                    ()=>{
+                        handleToggleMarkdownEditor(editorId);
+                    }
+                );
+            }
+        })
+        
+        
+    }
+
+    //处理切换到Markdown编辑器
+    const handleToggleMarkdownEditor = (editorId: string) => {
+        
+        if (Object.keys(form.addQuestionEditor).length != 0) {//不等于空
+			form.addQuestionEditor.remove();
+            form.addQuestionEditor = {};
+		}
+        form.isMarkdown = true;
+    }
+
 
     
     //查询问题标签
@@ -436,13 +504,43 @@
                                 }
                             }
                         }
-
+                        if(data.supportEditor == 30 || data.supportEditor == 40){
+                            availableTagObject.push("toggleEditor");
+                        }
                         form.availableTag = availableTagObject;//问题编辑器允许使用标签
                     }
                     
                     form.fileSystem = data.fileSystem;//文件存储系统
-
+                    form.supportEditor = data.supportEditor;//支持编辑器 10.仅富文本编辑器 20.仅Markdown编辑器  30.富文本编辑器优先 40.Markdown编辑器优先
                 
+                    if(form.supportEditor == 20 || form.supportEditor == 40){
+                        form.isMarkdown = true;
+                    }
+
+                    if(form.addQuestionEditorPlugin != null && form.addQuestionEditorPlugin.length ==0){
+                        //添加插件
+                        form.addQuestionEditorPlugin.push(...markdownPlugins);
+
+                        form.addQuestionEditorPlugin.push(emoji());
+                        if(form.supportEditor == 30 || form.supportEditor == 40){//10.仅富文本编辑器 20.仅Markdown编辑器  30.富文本编辑器优先 40.Markdown编辑器优先
+                            form.addQuestionEditorPlugin.push(
+                                toggleEditor((editorId: string)=>{handleToggleRichtextEditor(editorId)})
+                            );
+                        }
+                        form.addQuestionEditorPlugin.push(
+                            help(form.availableTag,form.userGradeList)
+                        );
+
+                        if(form.availableTag?.indexOf('image') != -1){
+                            form.addQuestionEditorPlugin.push(
+                                imageUpload("user/control/question/upload?method=upload",'file',form.fileSystem)
+                            );
+                            form.addQuestionEditorPlugin.push(
+                                pasteImageUpload("user/control/question/upload?method=upload",'file',form.fileSystem)
+                            );
+                        }  
+                    }
+
 
                     if (data.captchaKey != undefined && data.captchaKey != '') {
                         form.showCaptcha = true;
@@ -452,16 +550,17 @@
 
                     if (Object.keys(form.addQuestionEditorCreateParameObject).length === 0) {//等于空
                         let uploadPath = "user/control/question/upload?method=upload";
-
-                        //创建富文本编辑器
-                        form.addQuestionEditor = createEditor(contentRef.value, form.availableTag, uploadPath, form.userGradeList,form.fileSystem);
-                        if(Object.keys(form.addQuestionEditor).length > 0){
-                            form.addQuestionEditorCreateParameObject = {
-                                    ref:contentRef.value,
-                                    availableTag:form.availableTag,
-                                    uploadPath:uploadPath,
-                                    userGradeList:form.userGradeList
-                            }
+                        if(!form.isMarkdown){
+                            //创建富文本编辑器
+                            form.addQuestionEditor = createEditor(contentRef.value, form.availableTag, uploadPath, form.userGradeList,form.fileSystem,(editorId: string)=>{
+                                handleToggleMarkdownEditor(editorId);
+                            });
+                        }
+                        form.addQuestionEditorCreateParameObject = {
+                                ref:contentRef.value,
+                                availableTag:form.availableTag,
+                                uploadPath:uploadPath,
+                                userGradeList:form.userGradeList
                         }
                     }
                     
@@ -588,9 +687,17 @@
                 if(form.title != null && form.title != ''){
                     formData.append('title', form.title);
                 }
-                if(contentRef.value.value != null && contentRef.value.value !=''){
-                    formData.append('content', contentRef.value.value);
+
+                if(form.isMarkdown){
+                    formData.append('isMarkdown', form.isMarkdown.toString());
+                    formData.append('markdownContent', form.markdownContent);
+                }else{
+                    if(contentRef.value.value != null && contentRef.value.value !=''){
+                        formData.append('content', contentRef.value.value);
+                    }
                 }
+
+                
                 
                 if(form.amount != null && form.amount != ''){
                     formData.append('amount', form.amount);
@@ -696,6 +803,18 @@
     background: #fff;
     padding:25px 40px 40px 40px;
     margin:0px auto;
+
+    :deep(.bytemd){
+        height: calc(100vh - 100px);
+        
+    }
+    :deep(.CodeMirror-scroll){//让外层滚动条不滚动
+        overscroll-behavior:  contain;
+    }
+    :deep(.bytemd-preview){//让外层滚动条不滚动
+        overscroll-behavior:  contain;
+    }
+    
 
     .selectCount{
         width: 200px;

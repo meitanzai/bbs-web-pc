@@ -40,7 +40,16 @@
                                 <div class="appendQuestion-wrap">
                                     <el-form label-position="right" :ref="'formAppendQuestionRef'" size="large" :model="state" class="iconForm-container" @submit.native.prevent>
                                         <el-form-item :error="error.appendQuestionContent">
-                                            <textarea ref="formAppendQuestionContentRef" style="width:100%;height:230px;visibility:hidden;"></textarea>
+                                            
+
+                                            <div v-show="!state.isAppendQuestionMarkdown" style="width: 100%;">
+                                                <textarea :editorId="'appendQuestion'" ref="formAppendQuestionContentRef" style="width:100%;height:230px;visibility:hidden;"></textarea>
+                                        
+                                            </div>
+                                            <div v-if="state.isAppendQuestionMarkdown" style="width: 100%;">
+                                                <Editor  :editorId="'appendQuestion'" :value="state.appendQuestionMarkdownContent" :plugins="state.appendQuestionEditorPlugin" :locale="zhHans" :sanitize="appendQuestionSanitize" placeholder="请输入内容..." @change="handleAppendQuestionMarkdownChange"/>
+                                            </div>
+                                        
                                         </el-form-item>
                                         <el-form-item :error="error.captchaValue.get('appendQuestion-'+state.questionId)" v-if="state.showCaptcha.get('appendQuestion-'+state.questionId)" class="captcha-item">
                                             <el-row>
@@ -85,12 +94,12 @@
                                 </div>
                             </div>
                             
-                            <div class="content" :class="router.currentRoute.value.query.reportModule !=undefined && parseInt(router.currentRoute.value.query.reportModule as string) == 40 ? 'reportMark' : ''">
+                            <div :class="[state.question.isMarkdown != null && state.question.isMarkdown == true ? 'markdown-body-custom questionMarkdownContent' : 'content', router.currentRoute.value.query.reportModule !=undefined && parseInt(router.currentRoute.value.query.reportModule as string) == 40 ? 'reportMark' : '']" >
                                 <div class="cancelAccount" v-if="state.question.account == null || state.question.account == ''">此用户账号已注销</div>
                                 
-                                <div :ref="'question_'+state.question.id">
-                                    <RenderTemplate :html="state.question.content"></RenderTemplate> 
-                                </div>        
+                                <div :ref="el => {if(el) questionRefs['question_'+state.question.id] = el}">
+                                   <RenderTemplate :html="state.question.content"></RenderTemplate>
+                                </div>     
                             </div>
                             <template v-for="(appendQuestionItem,index) in state.question.appendQuestionItemList">
                                 <div :class="(index%2)==0 ? 'appendBox odd' : 'appendBox even'">
@@ -98,7 +107,7 @@
                                         <span class="prompt">第{{index + 1}}条附言</span>
                                         <span class="appendTime">{{appendQuestionItem.postTime}}</span>
                                     </div>
-                                    <div class="appendContent" :ref="'appendQuestion_'+appendQuestionItem.id">
+                                    <div :class="[appendQuestionItem.isMarkdown != null && appendQuestionItem.isMarkdown == true ? 'markdown-body-custom appendMarkdownContent' : 'appendContent']" :ref="'appendQuestion_'+appendQuestionItem.id">
                                         <RenderTemplate :html="appendQuestionItem.content"></RenderTemplate>
                                     </div> 
                                 </div>		
@@ -125,7 +134,16 @@
                                 <div class="addAnswer-wrap">
                                     <el-form label-position="right" :ref="'formAddAnswerRef'" size="large" :model="state" class="iconForm-container" @submit.native.prevent>
                                         <el-form-item :error="error.content.get('addAnswer-'+state.questionId)">
-                                            <textarea ref="formAddAnswerContentRef" style="width:100%;height:230px;visibility:hidden;"></textarea>
+                                            
+                                            <div v-show="!state.isAddAnswerMarkdown" style="width: 100%;">
+                                                <textarea :editorId="'addAnswer'" ref="formAddAnswerContentRef" style="width:100%;height:230px;visibility:hidden;"></textarea>
+                                            </div>
+                                            <div v-if="state.isAddAnswerMarkdown" style="width: 100%;">
+                                                
+                                                <Editor :editorId="'addAnswer'" :value="state.addAnswerMarkdownContent" :plugins="state.addAnswerEditorPlugin" :locale="zhHans" :sanitize="answerSanitize" placeholder="请输入内容..." @change="handleAddAnswerMarkdownChange"/>
+                                           
+                                            </div>
+                                        
                                         </el-form-item>
                                         
                                         <el-form-item :error="error.captchaValue.get('addAnswer-'+state.questionId)" v-if="state.showCaptcha.get('addAnswer-'+state.questionId)" class="captcha-item">
@@ -227,7 +245,7 @@
                                     <i class="cms-trophy-solid" ></i><span>最佳答案</span>-->
                                 </div>
                                 
-                                <div class="answerContent">
+                                <div :class="[answer.isMarkdown != null && answer.isMarkdown == true ? 'markdown-body-custom answerMarkdownContent' : 'answerContent']" >
                                     <div class="cancelAccount" v-if="answer.account == null || answer.account == ''">此用户账号已注销</div>
                                     
                                     <div :ref="'answerContent_'+answer.id">
@@ -274,7 +292,7 @@
                                                             <span class="arrow"><icon name="caret-right" size="14px"/></span>
                                                             <router-link tag="a" v-if="reply.friendUserName!= null && reply.friendUserName != ''" class="friendAvatarBox" :to="{path:'/user/control/home',query: {userName: reply.friendUserName}}">
                                                                 <img v-if="reply.friendAvatarName != null" :src="reply.friendAvatarPath+'100x100/'+reply.friendAvatarName" class="img">
-                                                                <img v-if="reply.friendAvatarName == null" :src="reply.friendAvatar" width="40" height="40" class="img"/>
+                                                                <img v-if="reply.friendAvatarName == null" :src="reply.friendAvatar" width="20" height="20" class="img"/>
                                                                 
                                                             </router-link>
                                                             
@@ -426,7 +444,13 @@
                                         <div class="head"><Icon name="pencil-alt" size="50px" class="icon"/></div>
                                         <el-form label-position="right" :ref="'formEditAnswerRef-'+answer.id" size="large" :model="state" class="iconForm-container" @submit.native.prevent>
                                             <el-form-item :error="error.content.get('editAnswer-'+answer.id)">
-                                                <textarea :ref="handleEditAnswerNodes" :answerId="answer.id" style="width:100%;height:230px;visibility:hidden;"></textarea>
+                                                
+                                                <div v-show="!state.isEditAnswerMarkdownMap.get(answer.id)" style="width: 100%;">
+                                                    <textarea :ref="handleEditAnswerNodes" :editorId="'editAnswer_'+answer.id" :answerId="answer.id" style="width:100%;height:230px;visibility:hidden;"></textarea>
+                                                </div>
+                                                <div v-if="state.isEditAnswerMarkdownMap.get(answer.id)" style="width: 100%;">
+                                                    <Editor mode="split" :editorId="'editAnswer_'+answer.id" :value="(state.editAnswerMarkdownContent[answer.id] as string)" :plugins="state.editAnswerEditorPlugin" :locale="zhHans" :sanitize="answerSanitize" placeholder="请输入内容..." @change="handleEditAnswerMarkdownChange($event,answer.id)"/>
+                                                </div>
                                             </el-form-item>
                                             <el-form-item :error="error.captchaValue.get('editAnswer-'+answer.id)" v-if="state.showCaptcha.get('editAnswer-'+answer.id)" class="captcha-item">
                                                 <el-row>
@@ -666,10 +690,27 @@
     import { letterAvatar } from '@/utils/letterAvatar';
     import Icon from "@/components/icon/Icon.vue";
     import Long from "long";
-    import { escapeVueHtml } from '@/utils/escape';
+    import { escapeHtml, escapeVueHtml, unescapeHtml } from '@/utils/escape';
     import { getLanguageClassName, processErrorInfo } from '@/utils/tool';
     import { createEditor } from '@/utils/editor';
     import Prism from "prismjs";
+    import mermaid from "mermaid";
+    import katex from 'katex'
+    import 'katex/dist/katex.css'   
+    import zhHans from 'bytemd/locales/zh_Hans.json'
+    import { markdownPlugins,sanitize } from '@/utils/markdownEditor';
+  
+    import { toggleEditor } from '@/utils/markdownPlugin/plugin-toggle-editor';
+    import { help } from '@/utils/markdownPlugin/plugin-help';
+    import { emoji } from '@/utils/markdownPlugin/plugin-emoji';
+    import { imageUpload } from '@/utils/markdownPlugin/plugin-image-upload';
+    import { pasteImageUpload } from '@/utils/markdownPlugin/plugin-paste-image';
+    import { Editor } from '@bytemd/vue-next'
+    import type { BytemdPlugin } from 'bytemd'
+    import config from '@/utils/markdownPlugin/plugin-config';
+
+    mermaid.mermaidAPI.initialize({ startOnLoad: false });
+
 
     const { proxy } = getCurrentInstance() as ComponentInternalInstance;
     const store = appStore();
@@ -679,6 +720,9 @@
     const formAddAnswerContentRef = ref()
 
     const right_ref = ref()
+
+     //问题内容
+     const questionRefs = ref({}) as any;
 
     //html页元信息
     const computedMeta = computed(() => ({ 
@@ -714,7 +758,7 @@
         question: {} as Question,
         question_loading:true,//是否显示答案骨架屏
   
-      
+       
 
         alreadyCollected :false,//用户是否已经收藏答案
         favoriteCount : 0,//答案用户收藏总数
@@ -729,21 +773,28 @@
         
         appendQuestionFormView:false,//是否显示追加问题表单
         appendQuestionEditor :{} as any,//追加问题编辑器
-        appendQuestionEditorCreateParameObject :{},//追加问题编辑器的创建参数
+        appendQuestionEditorCreateParameObject :{} as any,//追加问题编辑器的创建参数
+        appendQuestionMarkdownContent:'',//追加问题markdown内容
+        isAppendQuestionMarkdown:false,//追加问题是否使用markdown编辑器
+
+
 
         allowAnswer:false,//是否显示答案表单
         fileSystem:0,//文件存储系统
-
+        supportEditor:10,//支持编辑器
         
         addAnswerEditor :{} as any,//添加答案编辑器
-        addAnswerEditorCreateParameObject :{},//添加答案编辑器的创建参数
+        addAnswerEditorCreateParameObject :{} as any,//添加答案编辑器的创建参数
         
+        addAnswerMarkdownContent:'',//添加答案markdown内容
+        isAddAnswerMarkdown:false,//添加答案是否使用markdown评论编辑器
         
       
         editAnswerFormView : new Map(),//修改答案表单  key:答案Id value:是否显示
         editAnswerEditorMap:new Map(),//修改答案富文本编辑器集合 key:答案Id value:富文本编辑器
         editAnswerEditorCreateParameMap:new Map(),//修改答案编辑器的创建参数 key:答案Id value:编辑器参数对象
-       
+        isEditAnswerMarkdownMap: new Map(),//修改答案是否使用markdown编辑器  key:评论Id value:是否为markdown编辑器
+        editAnswerMarkdownContent : {} as any,//修改答案markdown编辑内容 key:评论Id value:评论内容
 
         isPageCall :false,//是否由分页按钮调用
 
@@ -791,6 +842,11 @@
         dot : new Map(),//楼中楼的点  key:回复Id value:是否显示
 
         affix_offset:10,//固钉偏移距离
+
+
+        appendQuestionEditorPlugin:[] as BytemdPlugin[],//追加问题Markdown编辑器插件
+        addAnswerEditorPlugin:[] as BytemdPlugin[],//添加答案Markdown编辑器插件
+        editAnswerEditorPlugin:[] as BytemdPlugin[],//修改答案Markdown编辑器插件
     });
 
      //错误
@@ -828,7 +884,99 @@
         }
 	}
 
+    //处理追加问题Markdown
+    const handleAppendQuestionMarkdownChange = (value: string) => {
+        state.appendQuestionMarkdownContent = value;
+    }
 
+    //追加问题白名单
+    const appendQuestionSanitize = (schema: any) => {
+        schema = sanitize(schema);
+        return schema;
+    }
+
+    //追加问题处理切换到富文本编辑器
+    const handleAppendQuestionToggleRichtextEditor = (editorId: string) => {
+        state.isAppendQuestionMarkdown = false;
+        nextTick(()=>{
+            if (Object.keys(state.appendQuestionEditorCreateParameObject).length != 0) {//不等于空
+                //创建富文本编辑器
+                state.appendQuestionEditor = createEditor(
+                    state.appendQuestionEditorCreateParameObject.ref, 
+                    state.appendQuestionEditorCreateParameObject.availableTag, 
+                    state.appendQuestionEditorCreateParameObject.uploadPath, 
+                    state.appendQuestionEditorCreateParameObject.userGradeList,
+                    state.fileSystem,
+                    ()=>{
+                        handleAppendQuestionToggleMarkdownEditor(editorId);
+                    }
+                );
+            }
+        })
+        
+        
+    }
+
+    //追加问题处理切换到Markdown编辑器
+    const handleAppendQuestionToggleMarkdownEditor = (editorId: string) => {
+        
+        if (Object.keys(state.appendQuestionEditor).length != 0) {//不等于空
+			state.appendQuestionEditor.remove();
+            state.appendQuestionEditor = {};
+		}
+        state.isAppendQuestionMarkdown = true;
+    }
+
+
+
+
+    //处理添加答案Markdown
+    const handleAddAnswerMarkdownChange = (value: string) => {
+        state.addAnswerMarkdownContent = value;
+    }
+
+    //答案白名单
+    const answerSanitize = (schema: any) => {
+        schema = sanitize(schema);
+        return schema;
+    }
+
+
+     //处理添加答案切换到富文本编辑器
+     const handleAddAnswerToggleRichtextEditor = (editorId: string) => {
+        state.isAddAnswerMarkdown = false;
+        nextTick(()=>{
+            if (Object.keys(state.addAnswerEditorCreateParameObject).length != 0) {//不等于空
+                //创建富文本编辑器
+                state.addAnswerEditor = createEditor(
+                    state.addAnswerEditorCreateParameObject.ref, 
+                    state.addAnswerEditorCreateParameObject.availableTag, 
+                    state.addAnswerEditorCreateParameObject.uploadPath, 
+                    state.addAnswerEditorCreateParameObject.userGradeList,
+                    state.fileSystem,
+                    ()=>{
+                        handleAddAnswerToggleMarkdownEditor(editorId);
+                    }
+                );
+            }
+        })
+    }
+
+    //处理添加答案切换到Markdown编辑器
+    const handleAddAnswerToggleMarkdownEditor = (editorId: string) => {
+        if (Object.keys(state.addAnswerEditor).length != 0) {//不等于空
+            state.addAnswerEditor.remove();
+            state.addAnswerEditor = {};
+        }
+        state.isAddAnswerMarkdown = true;
+    }
+
+
+
+    //处理修改答案Markdown
+    const handleEditAnswerMarkdownChange = (value: string, answerId: string) => {
+       Object.assign(state.editAnswerMarkdownContent, {[answerId] : value});
+    }
 
 
     //查询问题
@@ -881,7 +1029,7 @@
 
                 nextTick(()=>{
                     //渲染代码
-                    let questionRefValue = proxy?.$refs['question_'+state.questionId];
+                    let questionRefValue = questionRefs.value['question_'+state.questionId]
                     if(questionRefValue != undefined){
                         renderBindNode(questionRefValue); 
                     }
@@ -962,54 +1110,117 @@
                     childNode.removeAttribute("bordercolor");
                 }
 
-
-                
-                //处理代码标签
+               //处理代码标签
                 if(childNode.nodeName.toLowerCase() == "pre" ){
-                    let pre_html = childNode.innerHTML;
-                    let class_val = childNode.className;
-                    let lan_class = "";
+
                     
-                    let class_arr = new Array();
-                    class_arr = class_val.split(' ');
+                    let firstChildNode = null;//第一个子节点
+
+                    for(let p = 0;p < childNode.childNodes.length;p++){
+                        let preChildNode = childNode.childNodes[p];
+                        if(preChildNode.nodeName.toLowerCase() == "code" ){
+                            firstChildNode = preChildNode;
+                            break;
+                        }
+                    }
                     
-                    for(let k=0; k<class_arr.length; k++){
-                        let className = class_arr[k].trim();
+                    if(firstChildNode != null && firstChildNode.getAttribute("class")!= null && firstChildNode.getAttribute("class").indexOf("language-") != -1){//Markdown代码
                         
-                        if(className != null && className != ""){
-                            if (className.lastIndexOf('lang-', 0) === 0) {
-                                lan_class = className;
-                                break;
+                        let class_val = firstChildNode.className;
+                        let lan_class = "";
+                        let class_arr = new Array();
+                        class_arr = class_val.split(' ');
+                        
+                        for(let k=0; k<class_arr.length; k++){
+                            let className = class_arr[k].trim();
+                            
+                            if(className != null && className != ""){
+                                if (className.lastIndexOf('language-', 0) === 0) {
+                                    lan_class = className;
+                                    break;
+                                }
                             }
                         }
+                        if(firstChildNode.getAttribute("class").indexOf("language-mermaid") == -1){
+                            childNode.className = "line-numbers "+lan_class;
+                            childNode.setAttribute("data-prismjs-copy","复制");
+                            childNode.setAttribute("data-prismjs-copy-error","按Ctrl+C复制");
+                            childNode.setAttribute("data-prismjs-copy-success","复制成功");
+
+
+                            let nodeHtml = "";
+
+                            //删除code节点
+                            let preChildNodeList = childNode.childNodes;
+                            for(let p = 0;p < preChildNodeList.length;p++){
+                                let preChildNode = preChildNodeList[p];
+                                if(preChildNode.nodeName.toLowerCase() == "code" ){
+                                    nodeHtml += preChildNode.innerHTML;
+                                    preChildNode.parentNode.removeChild(preChildNode);
+                                }
+                                
+                            }
+                            
+                            let dom = document.createElement('code');
+                            dom.className = "line-numbers "+lan_class;
+                            dom.innerHTML=nodeHtml;
+                            
+                        
+                            childNode.appendChild(dom);
+                        }
                     }
-                    
-                    childNode.className = "line-numbers "+getLanguageClassName(lan_class);
-                    childNode.setAttribute("data-prismjs-copy","复制");
-                    childNode.setAttribute("data-prismjs-copy-error","按Ctrl+C复制");
-                    childNode.setAttribute("data-prismjs-copy-success","复制成功");
 
 
-                    let nodeHtml = "";
-
-                    //删除code节点
-                    let preChildNodeList = childNode.childNodes;
-                    for(let p = 0;p < preChildNodeList.length;p++){
-                        let preChildNode = preChildNodeList[p];
-                        if(preChildNode.nodeName.toLowerCase() == "code" ){
-                            nodeHtml += preChildNode.innerHTML;
-                            preChildNode.parentNode.removeChild(preChildNode);
+                    if(childNode.className != null && childNode.className.indexOf("lang-") != -1){//富文本编辑器代码
+                       
+                        let pre_html = childNode.innerHTML;
+                        let class_val = childNode.className;
+                        let lan_class = "";
+                        
+                        let class_arr = new Array();
+                        class_arr = class_val.split(' ');
+                        
+                        for(let k=0; k<class_arr.length; k++){
+                            let className = class_arr[k].trim();
+                            
+                            if(className != null && className != ""){
+                                if (className.lastIndexOf('lang-', 0) === 0) {
+                                    lan_class = className;
+                                    break;
+                                }
+                            }
                         }
                         
-                    }
+                        childNode.className = "line-numbers "+getLanguageClassName(lan_class);
+                        childNode.setAttribute("data-prismjs-copy","复制");
+                        childNode.setAttribute("data-prismjs-copy-error","按Ctrl+C复制");
+                        childNode.setAttribute("data-prismjs-copy-success","复制成功");
+
+
+                        let nodeHtml = "";
+
+                        //删除code节点
+                        let preChildNodeList = childNode.childNodes;
+                        for(let p = 0;p < preChildNodeList.length;p++){
+                            let preChildNode = preChildNodeList[p];
+                            if(preChildNode.nodeName.toLowerCase() == "code" ){
+                                nodeHtml += preChildNode.innerHTML;
+                                preChildNode.parentNode.removeChild(preChildNode);
+                            }
+                            
+                        }
+                        
+                        let dom = document.createElement('code');
+                        dom.className = "line-numbers "+getLanguageClassName(lan_class);
+                        dom.innerHTML=nodeHtml;
+                        
                     
-                    let dom = document.createElement('code');
-                    dom.className = "line-numbers "+getLanguageClassName(lan_class);
-                    dom.innerHTML=nodeHtml;
+                        childNode.appendChild(dom);
+                    }
+
+                    
                     
                    
-                    childNode.appendChild(dom);
-                
                 }
                 
                 bindNode(childNode);
@@ -1204,7 +1415,7 @@
     }
 
     //递归渲染绑定节点
-    const renderBindNode = (node:any) => {	
+    const renderBindNode = async (node:any) => {	
          //先找到子节点
          let nodeList = node.childNodes;
         for(let i = 0;i < nodeList.length;i++){
@@ -1216,7 +1427,67 @@
             if(childNode.nodeType == 1){
                 //处理代码标签
                 if(childNode.nodeName.toLowerCase() == "pre" ){
-                    Prism.highlightAllUnder(childNode);
+                    let firstChildNode:any = null;//第一个子节点
+                    for(let p = 0;p < childNode.childNodes.length;p++){
+                        let preChildNode = childNode.childNodes[p];
+                        if(preChildNode.nodeName.toLowerCase() == "code" ){
+                            firstChildNode = preChildNode;
+                            break;
+                        }
+                    }
+                   
+                    if(firstChildNode != null && firstChildNode.getAttribute("class")!= null){
+                        if(firstChildNode.getAttribute("class") != null && firstChildNode.getAttribute("class").indexOf("language-mermaid") != -1){
+                           
+                            if(firstChildNode.innerHTML){
+                            //  const { svg } = await mermaid.render('mermaid_'+random, unescapeHtml(firstChildNode.innerHTML));
+
+                              //  childNode.innerHTML = svg;
+
+                              const mermaid_container = document.createElement('div')
+                                mermaid_container.style.lineHeight = 'initial' //重置行高
+
+                                childNode.replaceWith(mermaid_container);
+                                mermaid.render(
+                                    'mermaid_'+random,
+                                    unescapeHtml(firstChildNode.innerHTML),
+                                    // @ts-ignore
+                                    mermaid_container
+                                ).then((svgCode) => {
+                                    // @ts-ignore
+                                    mermaid_container.innerHTML = svgCode.svg
+                                
+                                })
+                                .catch((err) => {
+                                // console.error(err);
+                                })
+                            }
+                        }else if(firstChildNode.getAttribute("class").indexOf("language-mermaid") != -1){
+                            
+                        }else{
+                            Prism.highlightAllUnder(childNode);
+                        }
+                    }
+                   
+                    
+                   
+                }else if(childNode.nodeName.toLowerCase() == "span"){
+                    if(childNode.getAttribute("class") != null && childNode.getAttribute("class").indexOf("math-inline") != -1 && childNode.childNodes.length==1 && childNode.childNodes[0].nodeType ==3){
+                        let tex = katex.renderToString(unescapeHtml(childNode.innerHTML), {
+                            throwOnError: false,
+                            displayMode:false//内联模式
+                        });
+                        childNode.innerHTML = tex;
+                    }
+                }else if(childNode.nodeName.toLowerCase() == "div"){
+                    if(childNode.getAttribute("class") != null && childNode.getAttribute("class").indexOf("math-display") != -1 && childNode.childNodes.length==1 && childNode.childNodes[0].nodeType ==3){
+                        let tex = katex.renderToString(unescapeHtml(childNode.innerHTML), {
+                            throwOnError: false,
+                            displayMode:true//块模式
+                        });
+                        childNode.innerHTML = tex;
+
+                    }
                 }
                 renderBindNode(childNode);
             }
@@ -1413,17 +1684,52 @@
                                     }
                                 }
                             }
-
+                            if(data.supportEditor == 30 || data.supportEditor == 40){
+                                availableTagObject.push("toggleEditor");
+                            }
                             availableTag = availableTagObject;//编辑器允许使用标签
                         }
                         
                         state.fileSystem = data.fileSystem;//文件存储系统
 
+
+                        if(data.supportEditor == 20 || data.supportEditor == 40){//支持编辑器 10.仅富文本编辑器 20.仅Markdown编辑器  30.富文本编辑器优先 40.Markdown编辑器优先
+                            state.isAppendQuestionMarkdown = true;
+                        }
+
+
+                        if(state.appendQuestionEditorPlugin != null && state.appendQuestionEditorPlugin.length ==0){
+                            //添加插件
+                            state.appendQuestionEditorPlugin.push(...markdownPlugins);
+
+                            state.appendQuestionEditorPlugin.push(emoji());
+                            if(data.supportEditor == 30 || data.supportEditor == 40){//10.仅富文本编辑器 20.仅Markdown编辑器  30.富文本编辑器优先 40.Markdown编辑器优先
+                                state.appendQuestionEditorPlugin.push(
+                                    toggleEditor((editorId: string)=>{handleAppendQuestionToggleRichtextEditor(editorId)})
+                                );
+                            }
+                            state.appendQuestionEditorPlugin.push(
+                                help(availableTag,[])
+                            );
+                            if(availableTag?.indexOf('image') != -1){
+                                state.appendQuestionEditorPlugin.push(
+                                    imageUpload("user/control/question/upload?method=upload",'file',data.fileSystem)
+                                );
+                                state.appendQuestionEditorPlugin.push(
+                                    pasteImageUpload("user/control/question/upload?method=upload",'file',data.fileSystem)
+                                );
+                            }  
+                        }
+
                         if (Object.keys(state.appendQuestionEditorCreateParameObject).length === 0) {//等于空
                             let uploadPath = "user/control/question/upload";
-                        
-                            //创建富文本编辑器
-                            state.appendQuestionEditor = createEditor(formAppendQuestionContentRef.value, availableTag, uploadPath, null,state.fileSystem);
+                            if(!state.isAppendQuestionMarkdown){
+                                //创建富文本编辑器
+                                state.appendQuestionEditor = createEditor(formAppendQuestionContentRef.value, availableTag, uploadPath, null,state.fileSystem,(editorId: string)=>{
+                                    handleAppendQuestionToggleMarkdownEditor(editorId);
+                                });
+                            }
+                            
                             state.appendQuestionEditorCreateParameObject = {
                                     ref:formAppendQuestionContentRef.value,
                                     availableTag:availableTag,
@@ -1499,10 +1805,16 @@
                 formData.append('questionId', state.questionId);
 
                 
-
-                if(formAppendQuestionContentRef.value.value != null && formAppendQuestionContentRef.value.value !=''){
-                    formData.append('content', formAppendQuestionContentRef.value.value);
+                if(state.isAppendQuestionMarkdown){
+                    formData.append('isMarkdown', state.isAppendQuestionMarkdown.toString());
+                    formData.append('markdownContent', state.appendQuestionMarkdownContent);
+                }else{
+                    if(formAppendQuestionContentRef.value.value != null && formAppendQuestionContentRef.value.value !=''){
+                        formData.append('content', formAppendQuestionContentRef.value.value);
+                    }
                 }
+
+                
                 
                 if(state.captchaKey.get(_key) != undefined && state.captchaKey.get(_key) != null){
                     //验证码Key
@@ -1535,9 +1847,21 @@
                                 }
                             })
 
-                            state.appendQuestionEditor.remove();
+                            state.appendQuestionMarkdownContent = "";
+
+                            
+                            if (Object.keys(state.appendQuestionEditor).length != 0) {//不等于空
+                                state.appendQuestionEditor.remove();
+                                state.appendQuestionEditor = {};
+                               
+                            }
                             state.appendQuestionEditorCreateParameObject = {}
-                            state.appendQuestionFormView = false;
+
+                           
+                            nextTick(()=>{//需要延迟才能让state.appendQuestionFormView的设置生效
+                                state.appendQuestionFormView = false;
+                            })
+                           
                             
                             //重置表单
                             //formAddCommentRef.value?.resetFields();
@@ -1584,10 +1908,11 @@
     }
     //取消追加问题
     const onCancelAppendQuestion = () => {
-        if(state.appendQuestionEditor != null || Object.keys(state.appendQuestionEditor).length >0){
+        if(state.appendQuestionEditor != null && Object.keys(state.appendQuestionEditor).length >0){
             state.appendQuestionEditor.remove();
+            state.appendQuestionEditor = {};
         }
-        if(state.appendQuestionEditorCreateParameObject != null || Object.keys(state.appendQuestionEditorCreateParameObject).length >0){
+        if(state.appendQuestionEditorCreateParameObject != null && Object.keys(state.appendQuestionEditorCreateParameObject).length >0){
             state.appendQuestionEditorCreateParameObject = {}
 
         }
@@ -1630,12 +1955,43 @@
                                     }
                                 }
                             }
-
+                            if(data.supportEditor == 30 || data.supportEditor == 40){
+                                availableTagObject.push("toggleEditor");
+                            }
                             availableTag = availableTagObject;//答案编辑器允许使用标签
                         }
                         
                         state.fileSystem = data.fileSystem;//文件存储系统
+                        state.supportEditor = data.supportEditor;//支持编辑器 10.仅富文本编辑器 20.仅Markdown编辑器  30.富文本编辑器优先 40.Markdown编辑器优先
+                        
+                        if(state.addAnswerEditorPlugin != null && state.addAnswerEditorPlugin.length ==0){
+                            //添加插件
+                            state.addAnswerEditorPlugin.push(...markdownPlugins);
+                            state.addAnswerEditorPlugin.push(emoji());
+                            state.addAnswerEditorPlugin.push(config(false));
+                            
+                            if(state.supportEditor == 30 || state.supportEditor == 40){//10.仅富文本编辑器 20.仅Markdown编辑器  30.富文本编辑器优先 40.Markdown编辑器优先
+                                state.addAnswerEditorPlugin.push(
+                                    toggleEditor((editorId: string)=>{handleAddAnswerToggleRichtextEditor(editorId)})
+                                );
+                            }
+                            state.addAnswerEditorPlugin.push(
+                                help(availableTag,[])
+                            );
+                            if(availableTag?.indexOf('image') != -1){
+                                state.addAnswerEditorPlugin.push(
+                                    imageUpload("user/control/answer/uploadImage?questionId="+state.questionId,'file',state.fileSystem)
+                                );
+                                state.addAnswerEditorPlugin.push(
+                                    pasteImageUpload("user/control/answer/uploadImage?questionId="+state.questionId,'file',state.fileSystem)
+                                );
+                            }    
+                            
+                        }
 
+                        if(data.supportEditor == 20 || data.supportEditor == 40){
+                            state.isAddAnswerMarkdown = true;
+                        }
 
                         if (data.captchaKey != undefined && data.captchaKey != '') {
                             
@@ -1648,15 +2004,17 @@
                         if (Object.keys(state.addAnswerEditorCreateParameObject).length === 0) {//等于空
                             let uploadPath = "user/control/answer/uploadImage?questionId="+state.questionId;
                         
-                            //创建富文本编辑器
-                            state.addAnswerEditor = createEditor(formAddAnswerContentRef.value, availableTag, uploadPath, null,state.fileSystem);
-                            if(Object.keys(state.addAnswerEditor).length > 0){
-                                state.addAnswerEditorCreateParameObject = {
-                                    ref:formAddAnswerContentRef.value,
-                                    availableTag:availableTag,
-                                    uploadPath:uploadPath,
-                                    userGradeList:null
-                                }
+                            if(!state.isAddAnswerMarkdown){
+                                //创建富文本编辑器
+                                state.addAnswerEditor = createEditor(formAddAnswerContentRef.value, availableTag, uploadPath, null,state.fileSystem,(editorId: string)=>{
+                                    handleAddAnswerToggleMarkdownEditor(editorId);
+                                });
+                            }
+                            state.addAnswerEditorCreateParameObject = {
+                                ref:formAddAnswerContentRef.value,
+                                availableTag:availableTag,
+                                uploadPath:uploadPath,
+                                userGradeList:null
                             }
                         }
                         
@@ -1711,10 +2069,16 @@
                 formData.append('questionId', state.questionId);
 
                 
-
-                if(formAddAnswerContentRef.value.value != null && formAddAnswerContentRef.value.value !=''){
-                    formData.append('content', formAddAnswerContentRef.value.value);
+                if(state.isAddAnswerMarkdown){
+                    formData.append('isMarkdown', state.isAddAnswerMarkdown.toString());
+                    formData.append('markdownContent', state.addAnswerMarkdownContent);
+                }else{
+                    if(formAddAnswerContentRef.value.value != null && formAddAnswerContentRef.value.value !=''){
+                        formData.append('content', formAddAnswerContentRef.value.value);
+                    }
                 }
+
+                
                 
                 if(state.captchaKey.get(_key) != undefined && state.captchaKey.get(_key) != null){
                     //验证码Key
@@ -1746,12 +2110,18 @@
                                 }
                             })
 
-                            //清空字段
-                            state.addAnswerEditor.html("");
-                            //自动展开内容
-                            state.addAnswerEditor.autoExpandContent();
-                            //state.addCommentEditor.remove();
-                            //state.addCommentEditorCreateParameObject = {};
+                            state.addAnswerMarkdownContent = "";
+
+
+
+                            if (Object.keys(state.addAnswerEditor).length != 0) {//不等于空
+                                //清空字段
+                                state.addAnswerEditor.html("");
+                                //自动展开内容
+                                state.addAnswerEditor.autoExpandContent();
+                                //state.addCommentEditor.remove();
+                                //state.addCommentEditorCreateParameObject = {};
+                            }
 
                             //重置表单
                             //formAddCommentRef.value?.resetFields();
@@ -1884,8 +2254,9 @@
         })
         .then((response: AxiosResponse) => {
             let data =  response.data;
-
+           
             let _answer = data.answer;
+            Object.assign(state.editAnswerMarkdownContent, {[_answer.id] : _answer.markdownContent});
 
             if(data.allowAnswer && _answer != undefined){
                 state.editAnswerFormView.set(answer.id,true);
@@ -1914,6 +2285,24 @@
                     state.fileSystem = data.fileSystem;//文件存储系统
 
 
+                    if(state.editAnswerEditorPlugin != null && state.editAnswerEditorPlugin.length ==0){
+                        //添加插件
+                        state.editAnswerEditorPlugin.push(...markdownPlugins);
+                        state.editAnswerEditorPlugin.push(emoji());
+                        state.editAnswerEditorPlugin.push(config(true));
+                        state.editAnswerEditorPlugin.push(
+                            help(availableTag,[])
+                        );
+                        if(availableTag?.indexOf('image') != -1){
+                            state.editAnswerEditorPlugin.push(
+                                imageUpload("user/control/answer/uploadImage?questionId="+state.questionId,'file',state.fileSystem)
+                            );
+                            state.editAnswerEditorPlugin.push(
+                                pasteImageUpload("user/control/answer/uploadImage?questionId="+state.questionId,'file',state.fileSystem)
+                            );
+                        }   
+                    }
+
                     if (data.captchaKey != undefined && data.captchaKey != '') {
                         
                         state.showCaptcha.set(_key,true)
@@ -1930,10 +2319,20 @@
                         if(_answerId == answer.id){
                             let uploadPath = "user/control/answer/uploadImage?questionId="+state.questionId;
                 
-                            //创建富文本编辑器
-                            let editor = createEditor(editAnswerElement, availableTag, uploadPath, null,state.fileSystem);
-                            state.editAnswerEditorMap.set(answer.id,editor);
+                            if(_answer.isMarkdown != null && _answer.isMarkdown == true){
+                                state.isEditAnswerMarkdownMap.set(answer.id,true);
+                            }else{
+                                state.isEditAnswerMarkdownMap.set(answer.id,false);
+                            }
+                            if(!state.isEditAnswerMarkdownMap.get(answer.id)){
+                                 //创建富文本编辑器
+                                let editor = createEditor(editAnswerElement, availableTag, uploadPath, null,state.fileSystem,(editorId: string)=>{});
+                                state.editAnswerEditorMap.set(answer.id,editor);
 
+                            }
+
+
+                           
                             state.editAnswerEditorCreateParameMap.set(answer.id, {
                                     ref:editAnswerElement,
                                     availableTag:availableTag,
@@ -2000,15 +2399,24 @@
                 let formData = new FormData();
                 formData.append('answerId', answerId);
 
-                for(let i = 0; i<state.editAnswerElementNodes.length; i++){
-                    let editAnswerElement = state.editAnswerElementNodes[i];
-                    let _answerId = editAnswerElement.getAttribute("answerId");
-                    
-                    if(_answerId == answerId){
-                        formData.append('content', editAnswerElement.value);
-                        break;
+                if(state.isEditAnswerMarkdownMap.get(answerId)!= undefined && state.isEditAnswerMarkdownMap.get(answerId) == true){
+                    if(state.editAnswerMarkdownContent[answerId] != undefined){
+                        formData.append('markdownContent', state.editAnswerMarkdownContent[answerId]);
+                    }
+                }else{
+                    for(let i = 0; i<state.editAnswerElementNodes.length; i++){
+                        let editAnswerElement = state.editAnswerElementNodes[i];
+                        let _answerId = editAnswerElement.getAttribute("answerId");
+                        
+                        if(_answerId == answerId){
+                            formData.append('content', editAnswerElement.value);
+                            break;
+                        }
                     }
                 }
+                
+
+                
                 
                 if(state.captchaKey.get(_key) != undefined && state.captchaKey.get(_key) != null){
                     //验证码Key
@@ -2047,7 +2455,17 @@
                                 state.editAnswerEditorMap.delete(answerId);
                                 state.editAnswerEditorCreateParameMap.delete(answerId);
                             }
-                            state.editAnswerFormView.set(answerId,false);
+
+                            if(state.editAnswerMarkdownContent[answerId] != undefined){
+                               state.editAnswerMarkdownContent[answerId] = ""
+                            }
+                           
+                            
+                            nextTick(()=>{//需要延迟才能让state.editAnswerMarkdownContent[answerId]的设置生效
+                                state.editAnswerFormView.set(answerId,false);
+                            })
+
+                           
 
 
                             if(state.showCaptcha.get(_key) == true){
@@ -3339,6 +3757,48 @@
         }
     }
 
+    //清除编辑器
+    const clearEditor = () => {
+        if (Object.keys(state.appendQuestionEditor).length != 0) {//不等于空
+            state.appendQuestionEditor.html("");//清空字段
+			state.appendQuestionEditor.remove();
+            state.appendQuestionEditor = {};
+		}
+        state.appendQuestionEditorCreateParameObject = {};
+        state.appendQuestionMarkdownContent='';
+        state.appendQuestionFormView = false;
+
+        
+        if (Object.keys(state.addAnswerEditor).length != 0) {//不等于空
+            state.addAnswerEditor.html("");//清空字段
+			state.addAnswerEditor.remove();
+            state.addAnswerEditor = {};
+		}
+        state.addAnswerEditorCreateParameObject = {};
+		
+		
+		
+		state.editAnswerEditorMap.forEach(function(value,key){
+            value.html("");//清空字段
+			value.remove();
+	    });
+		state.editAnswerEditorMap.clear();
+
+        state.addAnswerMarkdownContent='';
+
+
+        state.isEditAnswerMarkdownMap.clear();
+        state.editAnswerMarkdownContent = {} as any;//修改评论markdown编辑内容 key:评论Id value:评论内容
+
+        state.appendQuestionEditorPlugin.length = 0;//插件
+        state.addAnswerEditorPlugin.length = 0;//插件
+        state.editAnswerEditorPlugin.length = 0;//插件
+
+        state.editAnswerFormView.clear() //修改评论表单
+        state.editAnswerEditorCreateParameMap.clear()//修改评论编辑器的创建参数
+
+    }
+
     //导航守卫
     onBeforeRouteUpdate((to, from, next) => {
         if(to.name == 'question'){
@@ -3358,7 +3818,11 @@
             if(to.query.replyId != undefined){
                 replyId = to.query.replyId as string
             }
+            //清除编辑器
+            clearEditor();
+           
             queryQuestion(questionId,()=>{
+                state.questionId = questionId;
                 queryAddAnswer(questionId);
                 queryFollowerCount(state.question.userName);//查询粉丝总数
                 queryFollowing(state.question.userName);//查询是否已关注该用户
@@ -3560,6 +4024,94 @@
                         border-left: 5px solid #f89898;
                     }
                 }
+
+                :deep(.questionMarkdownContent){
+                    margin-top:5px;
+                    padding:20px 0px;
+                    color:$color-black-90;
+                    font-size:16px; 
+                    line-height:1.75;
+                    word-wrap:break-word;
+                    min-height: 100px;
+                    .cancelAccount{
+                        display: inline-block;
+                        vertical-align: middle;
+                        padding: 6px 6px;
+                        font-size: 14px;
+                        line-height: 14px;
+                        -webkit-border-radius: 2px;
+                        -moz-border-radius: 2px;
+                        border-radius: 2px;
+                        color: $color-black-50;
+                        background-color: $color-black-10;
+                        margin-bottom: 6px;
+                    }
+                    .lastUpdateTime{
+                        text-align: center;padding-top: 20px; padding-bottom: 30px;color: $color-black-60;font-size: 15px;
+                    }
+                    a{
+                        color: #1890ff;
+                    }
+                    //自动换行
+                    pre{
+                        white-space:pre-wrap;
+                    }
+                    
+                    ol{
+                        list-style: decimal;
+                    }
+                    ol li{
+                        list-style-type:decimal;
+                        list-style-position:inside;
+                    }
+                    ul{
+                        list-style: disc;
+                    }
+                    .task-list-item {
+                        list-style-type:none;
+                    }
+                   // ul li{
+                     //   list-style-type:disc;
+                  //  }
+                    p{
+                        font-size:16px;
+                        word-wrap:break-word
+                    }
+                    code[class*="language-"]{
+                        padding: 0 0;
+                    }
+                    img{
+                        max-width:100%;height:auto;border:none;background:none;margin:0;padding:0; 
+                        cursor: -webkit-zoom-in;
+                        cursor: zoom-in;
+                        vertical-align: sub;
+                    }
+
+                    table {
+                        border-collapse: separate; 
+                        border-spacing: 0; 
+                        border-top: 1px solid $color-black-30;
+                        border-left: 1px solid $color-black-30;
+                        th {
+                            font-weight: 600
+                        }
+                        th, td {
+                            border-right: 1px solid $color-black-30; 
+                            border-bottom: 1px solid $color-black-30;
+                            padding: 6px 13px
+                        }
+                        tr {
+                            background-color: #fff;
+                            border-top: 1px solid $color-black-30;
+                            &:nth-child(2n) {
+                                background-color: $color-black-10;
+                            }
+                        }
+                    }
+                    iframe{
+                        width:100%; height: 550px;padding:10px 0px; 
+                    }
+                }
                 :deep(.content){
                     margin-top:5px;padding:20px 0px;color:$color-black-90;font-size:16px; line-height:1.75; word-wrap:break-word;min-height: 100px;
                     .cancelAccount{
@@ -3586,6 +4138,7 @@
                         cursor: zoom-in;
                         vertical-align: sub;
                     }
+                    
                     /** 解决Chrome内核浏览器DPI缩放比例高于100%时部分边框变粗问题   本方案需删除table样式 border="1" bordercolor="#000000" */
                     table {
                         border-collapse: separate; 
@@ -3642,6 +4195,7 @@
                         white-space:pre-wrap;
                     }
                 }
+                    
                 :deep(.appendBox){
                     margin-top:25px;
                     position:relative;
@@ -3656,6 +4210,78 @@
                             font-size: 15px;
                             line-height: 34px;
                         }
+                    }
+                    .appendMarkdownContent{
+                        padding:20px 0px;
+                        color:$color-black-90;
+                        font-size:16px; 
+                        line-height:1.75; 
+                        word-wrap:break-word;
+                        min-height: 80px;
+
+                        a{
+                            color: #1890ff;
+                        }
+                        //自动换行
+                        pre{
+                            white-space:pre-wrap;
+                        }
+                        
+                        ol{
+                            list-style: decimal;
+                        }
+                        ol li{
+                            list-style-type:decimal;
+                            list-style-position:inside;
+                        }
+                        ul{
+                            list-style: disc;
+                        }
+                        .task-list-item {
+                            list-style-type:none;
+                        }
+                    // ul li{
+                        //   list-style-type:disc;
+                    //  }
+                        p{
+                            font-size:16px;
+                            word-wrap:break-word
+                        }
+                        code[class*="language-"]{
+                            padding: 0 0;
+                        }
+                        img{
+                            max-width:100%;height:auto;border:none;background:none;margin:0;padding:0; 
+                            cursor: -webkit-zoom-in;
+                            cursor: zoom-in;
+                            vertical-align: sub;
+                        }
+
+                        table {
+                            border-collapse: separate; 
+                            border-spacing: 0; 
+                            border-top: 1px solid $color-black-30;
+                            border-left: 1px solid $color-black-30;
+                            th {
+                                font-weight: 600
+                            }
+                            th, td {
+                                border-right: 1px solid $color-black-30; 
+                                border-bottom: 1px solid $color-black-30;
+                                padding: 6px 13px
+                            }
+                            tr {
+                                background-color: #fff;
+                                border-top: 1px solid $color-black-30;
+                                &:nth-child(2n) {
+                                    background-color: $color-black-10;
+                                }
+                            }
+                        }
+                        iframe{
+                            width:100%; height: 550px;padding:10px 0px; 
+                        }
+                        
                     }
                     .appendContent{
                         padding:20px 0px;color:$color-black-90;font-size:16px; line-height:1.75; word-wrap:break-word;min-height: 80px;
@@ -3919,6 +4545,16 @@
 .appendQuestion-formModule{
     margin-top:30px;
     margin-bottom: 50px;
+    :deep(.bytemd){
+        height: calc(100vh - 100px);
+        
+    }
+    :deep(.CodeMirror-scroll){//让外层滚动条不滚动
+        overscroll-behavior:  contain;
+    }
+    :deep(.bytemd-preview){//让外层滚动条不滚动
+        overscroll-behavior:  contain;
+    }
     //图标表单
     .iconForm-container{
         margin-top: 15px;
@@ -3952,9 +4588,29 @@
         background: #fff;
         padding:15px 15px 15px 15px;
         box-shadow: 0 0px 3px 0 rgba(0,0,0,.02), 0 4px 8px 0 rgba(0,0,0,.02);
+        :deep(.bytemd-split){
+                height: calc(100vh - 100px);
+            }
+            :deep(.bytemd-split .CodeMirror-scroll){//让外层滚动条不滚动
+                overscroll-behavior:  contain;
+            }
+            :deep(.bytemd-split .bytemd-preview){//让外层滚动条不滚动
+                overscroll-behavior:  contain;
+            }
+            :deep(.bytemd-editor){
+                min-height: 180px; 
+            }
+            :deep(.CodeMirror-sizer){
+                min-height: 175px !important; 
+            }
+            :deep(.bytemd-preview){
+                min-height: 180px; 
+            }
+        
         .form-action{
             position: relative;
-        
+
+           
             .submitButton{
                 width: 130px;
             }
@@ -3966,6 +4622,7 @@
                 h2{
                     font-size: 15px;
                     color: $color-black-40;
+                    font-weight: normal;
                 }
             }
         }
@@ -4168,7 +4825,101 @@
             }
         }
         .answer{
-            .answerContent{
+            :deep(.answerMarkdownContent){
+                padding:0px;
+                word-wrap:break-word;
+                color:$color-black-90;
+                font-size:15px; 
+                line-height:1.75;
+                margin-top: 20px;
+                .cancelAccount{
+                    display: inline-block;
+                    vertical-align: middle;
+                    padding: 6px 6px;
+                    font-size: 14px;
+                    line-height: 14px;
+                    -webkit-border-radius: 2px;
+                    -moz-border-radius: 2px;
+                    border-radius: 2px;
+                    color: $color-black-50;
+                    background-color: $color-black-10;
+                }
+                img {
+                    max-width:100%;
+                    height:auto;
+                    border:none;
+                    background:none;
+                    margin:0;
+                    padding:0;
+                    vertical-align: sub;
+                }
+                p{
+                    font-size:16px;
+                    word-wrap:break-word
+                }
+                code[class*="language-"]{
+                    padding: 0 0;
+                }
+                /** 解决Chrome内核浏览器DPI缩放比例高于100%时部分边框变粗问题   本方案需删除table样式 border="1" bordercolor="#000000" */
+                table {
+                    border-collapse: separate; 
+                    border-spacing: 0; 
+                    border-top: 1px solid $color-black-30;
+                    border-left: 1px solid $color-black-30;
+                    th {
+                        font-weight: 600
+                    }
+                    th, td {
+                        border-right: 1px solid $color-black-30;
+                        border-bottom: 1px solid $color-black-30;
+                        padding: 6px 13px
+                    }
+                    tr {
+                        background-color: #fff;
+                        border-top: 1px solid $color-black-30;
+                        &:nth-child(2n) {
+                            background-color: $color-black-10;
+                        }
+                    }
+                    /**
+                    table {
+                        width: 100%;
+                        th {
+                            font-weight: 600
+                        }
+                        td,th {
+                            border: 1px solid $color-black-30;
+                            padding: 6px 13px
+                        }
+                        tr {
+                            background-color: #fff;
+                            border-top: 1px solid $color-black-30;
+                            &:nth-child(2n) {
+                                background-color: $color-black-10;
+                            }
+                        }
+                    }**/
+                }
+                ol{
+                    li{ 
+                        list-style-type:decimal;
+                        list-style-position:inside;
+                    }
+                }
+                ul{
+                    li{ 
+                        margin-left:20px;
+                        list-style-type:disc;
+                    }
+                }
+                .task-list-item {
+                    list-style-type:none;
+                }
+                iframe{
+                    width:100%; height: 550px;padding:10px 0px; 
+                }
+            }
+             :deep(.answerContent){
                 padding:0px;
                 word-wrap:break-word;
                 color:$color-black-90;
@@ -4481,9 +5232,9 @@
                                     left: 0px;
                                     img{
                                         border-radius:100%;
-                                        width: 40px;
-                                        height: 40px;
-                                        margin-top: -1px;
+                                        width: 20px;
+                                        height: 20px;
+                                        margin-top: 10px;
                                     }
                                 }
                                 
@@ -4491,7 +5242,8 @@
                                     color:$color-black-60;
                                     font-size:14px;
                                     float: left;
-                                    margin-left: 36px;
+                                    margin-left: 15px;
+                                    font-weight: normal;
                                     .cancelNickname{
                                         font-weight:normal;
                                         margin-right: 3px;
@@ -4508,7 +5260,7 @@
                                         color: $color-black-60; 
                                         font-size: 14px;
                                         position: relative;
-                                        top: 11px;
+                                        top: 10px;
                                         max-width: 130px;
                                         overflow:hidden; //超出的文本隐藏
                                         text-overflow:ellipsis; //溢出用省略号显示
@@ -4528,7 +5280,7 @@
                                         color:#fff;
                                         background-color:#4cc8ff;
                                         position: relative;
-                                        top: 4px;
+                                        top: 3px;
                                     }
                                 }
                             }
@@ -4641,6 +5393,79 @@
                 position: absolute;font-size: 50px;top: -38px;left: -42px;color: $color-black-10;
             }
         }
+        :deep(.bytemd-split){
+            height: calc(100vh - 100px);
+        }
+        :deep(.bytemd-split .CodeMirror-scroll){//让外层滚动条不滚动
+            overscroll-behavior:  contain;
+        }
+        :deep(.bytemd-split .bytemd-preview){//让外层滚动条不滚动
+            overscroll-behavior:  contain;
+        }
+        :deep(.bytemd-editor){
+            min-height: 180px; 
+        }
+        :deep(.CodeMirror-sizer){
+            min-height: 175px !important; 
+        }
+        :deep(.bytemd-preview){
+            min-height: 180px; 
+        }
+        /** 隐藏‘斜体图标’ **/
+        :deep(.bytemd-toolbar-left [bytemd-tippy-path='2']) {
+            display: none;
+        }
+        /** 隐藏‘删除线图标’ **/
+        :deep(.bytemd-toolbar-left [bytemd-tippy-path='11']) {
+            display: none;
+        }
+        //编辑器边框
+        :deep(.bytemd-editor){
+            border-top: 1px solid $color-black-30;
+            border-left: 1px solid transparent;
+            border-right: 1px solid transparent;
+            
+            border-radius:0px;
+        }
+        :deep(.bytemd-status){
+            border: 1px solid transparent;
+            border-top: 1px solid $color-black-30;
+            border-radius:0px;
+        }
+        :deep(.bytemd-preview){
+            border-top: 1px solid $color-black-30;
+            border-left: 1px solid transparent;
+            border-right: 1px solid transparent;
+            border-radius:0px;
+        }
+        :deep(.bytemd-split .bytemd-editor){
+            border-right: 1px solid $color-black-30;
+        }
+        :deep(.bytemd-sidebar){
+            border-top-left-radius:0px;
+            border-left: 1px solid $color-black-30;
+        }
+        :deep(.bytemd-editor:has(~ .bytemd-sidebar)){
+            border-right: 1px solid $color-black-30;
+        }
+        :deep(.bytemd-editor:has(+ .bytemd-preview:not([style*='display:none']))){
+            border-right: 1px solid $color-black-30;
+        }
+        :deep(.bytemd-editor:has(~ .bytemd-hidden)){
+            border-right: 1px solid transparent;
+        }
+        :deep(.bytemd-preview:has(+ .bytemd-sidebar)){
+            border-right: 1px solid $color-black-30;
+        }
+        :deep(.bytemd-preview:has(~ .bytemd-hidden)){
+            border-right: 1px solid transparent;
+        }
+
+        /* 富文本编辑框颜色 */
+        :deep(.ke-edit) {
+            border: 1px solid transparent;
+        }
+        
         .submitButton{
             width: 130px;
         }

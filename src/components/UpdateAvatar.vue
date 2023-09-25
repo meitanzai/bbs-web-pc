@@ -150,6 +150,7 @@
             url: '/user/control/updateAvatar',
             method: 'post',
             data: formData,
+            timeout: 0,// 定义请求超时时间
             onUploadProgress: (progressEvent:any) => {
                 if (progressEvent.lengthComputable) {
                     
